@@ -273,7 +273,8 @@ async function getAdminDashboard() {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = req.url || '/';
+  const requestUrl = new URL(req.url || '/', 'http://localhost');
+  const pathname = requestUrl.pathname;
 
   // Responde rapidamente às requisições preflight do CORS
   if (req.method === 'OPTIONS') {
@@ -283,12 +284,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url === '/api/health') {
+  if (pathname === '/api/health') {
     sendJson(res, 200, { status: 'ok', service: 'flora-store-backend' });
     return;
   }
 
-  if (url === '/api/products') {
+  if (pathname === '/api/products') {
     try {
       const { data, error } = await supabase
         .from('products')
@@ -315,7 +316,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url === '/api/auth/register') {
+  if (pathname === '/api/auth/register') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
     try {
       const { name, email, password } = await readJsonBody(req);
@@ -331,7 +332,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url === '/api/auth/login') {
+  if (pathname === '/api/auth/login') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
     try {
       const { email, password } = await readJsonBody(req);
@@ -356,7 +357,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url === '/api/orders' && req.method === 'POST') {
+  if (pathname === '/api/orders' && req.method === 'POST') {
     try {
       const { customerName, customerEmail, total, status, formaPagamento, items } = await readJsonBody(req);
       const validatedOrder = validateOrderInput(customerName, customerEmail, total, status, formaPagamento);
@@ -375,7 +376,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url === '/api/admin/dashboard') {
+  if (pathname === '/api/admin/dashboard') {
     try {
       const dashboard = await getAdminDashboard();
       sendJson(res, 200, dashboard);
@@ -385,7 +386,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  const safePath = getSafeFilePath(url === '/' ? '/index.html' : url);
+  const safePath = getSafeFilePath((req.url || '/') === '/' ? '/index.html' : req.url);
   if (!safePath) return sendJson(res, 404, { error: 'Arquivo não encontrado' });
   serveStatic(res, safePath);
 });
