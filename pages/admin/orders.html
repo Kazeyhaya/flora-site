@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flora · Pedidos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-shell">
+        <a class="brand" href="../home/home.html">
+          <span class="brand-mark">🌸</span>
+          <span>Flora</span>
+        </a>
+        <nav class="nav-links">
+          <a href="../home/home.html">Home</a>
+          <a href="../products/products.html">Produtos</a>
+          <a href="./admin.html">Admin</a>
+          <a href="./clients.html">Clientes</a>
+          <a href="./orders.html" class="active">Pedidos</a>
+          <a href="./deliveries.html">Entregas</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container page">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Painel administrativo</p>
+          <h1>Pedidos</h1>
+          <p>Acompanhe o andamento das compras e os pedidos pendentes.</p>
+        </div>
+      </section>
+
+      <section class="panel-grid">
+        <article class="panel-card">
+          <h2>Pedidos pendentes</h2>
+          <p class="big-number">7</p>
+          <p>Compras aguardando confirmação.</p>
+        </article>
+        <article class="panel-card">
+          <h2>Últimos pedidos</h2>
+          <ul>
+            <li>#1042 · R$ 89,90 · pendente</li>
+            <li>#1041 · R$ 34,50 · aprovado</li>
+            <li>#1040 · R$ 56,80 · cancelado</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

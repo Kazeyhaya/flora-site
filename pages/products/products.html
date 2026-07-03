@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flora · Produtos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="./products.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="container nav-shell">
+        <a class="brand" href="../home/home.html">
+          <span class="brand-mark">🌸</span>
+          <span>Flora</span>
+        </a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">
+          <i class="fas fa-bars"></i>
+        </button>
+        <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
+          <a href="../home/home.html">Home</a>
+          <a href="./products.html" class="active">Produtos</a>
+          <a href="../login/login.html">Login</a>
+          <a href="../admin/admin.html">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container page">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Catálogo</p>
+          <h1>Nossos produtos</h1>
+          <p>Escolha por categoria ou busque pelo nome para encontrar os itens ideais para a rotina da cliente.</p>
+        </div>
+        <div class="filters">
+          <input id="searchInput" type="search" placeholder="Buscar produto" />
+          <select id="categoryFilter">
+            <option value="todos">Todas as categorias</option>
+            <option value="kits">Kits</option>
+            <option value="clientes">Clientes</option>
+            <option value="pedidos">Pedidos</option>
+            <option value="entregas">Entregas</option>
+          </select>
+        </div>
+      </section>
+
+      <section id="productsGrid" class="products-grid"></section>
+    </main>
+
+    <script src="./products.js"></script>
+  </body>
+</html>
