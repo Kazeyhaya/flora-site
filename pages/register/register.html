@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flora · Login</title>
+    <title>Flora · Cadastro</title>
     <link rel="icon" type="image/jpeg" href="../../flora.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <link rel="stylesheet" href="./login.css" />
+    <link rel="stylesheet" href="./register.css" />
   </head>
   <body>
     <header class="topbar">
@@ -24,8 +24,8 @@
         <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
           <a href="../home/home.html">Home</a>
           <a href="../products/products.html">Produtos</a>
-          <a href="./login.html" class="active">Login</a>
-          <a href="../register/register.html">Cadastro</a>
+          <a href="../login/login.html">Login</a>
+          <a href="./register.html" class="active">Cadastro</a>
         </nav>
       </div>
     </header>
@@ -34,26 +34,31 @@
       <section class="card">
         <div class="card-header">
           <p class="eyebrow">Área do cliente</p>
-          <h1>Entrar na Flora</h1>
-          <p>Acesse sua conta para continuar navegando pelo catálogo.</p>
+          <h1>Criar conta na Flora</h1>
+          <p>Cadastre-se para acompanhar pedidos e facilitar suas compras.</p>
         </div>
-        <form id="loginForm" class="form">
+        <form id="registerForm" class="form">
+          <label>
+            Nome
+            <input type="text" id="registerName" placeholder="Seu nome" required />
+          </label>
           <label>
             E-mail
-            <input type="email" id="loginEmail" placeholder="seu@email.com" required />
+            <input type="email" id="registerEmail" placeholder="seu@email.com" required />
           </label>
           <label>
             Senha
-            <input type="password" id="loginPassword" placeholder="Sua senha" required />
+            <input type="password" id="registerPassword" placeholder="Mínimo 6 caracteres" minlength="6" required />
           </label>
           <div class="actions">
-            <button class="btn btn-primary" type="submit">Entrar</button>
+            <button class="btn btn-primary" type="submit">Cadastrar</button>
             <a class="btn btn-secondary" href="../home/home.html">Voltar para home</a>
           </div>
         </form>
-        <p id="loginMessage" class="feedback"></p>
+        <p id="registerMessage" class="feedback"></p>
       </section>
     </main>
-    <script src="./login.js"></script>
+
+    <script src="./register.js"></script>
   </body>
 </html>

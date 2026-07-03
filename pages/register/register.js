@@ -1,5 +1,5 @@
-const loginForm = document.getElementById('loginForm');
-const loginMessage = document.getElementById('loginMessage');
+const registerForm = document.getElementById('registerForm');
+const registerMessage = document.getElementById('registerMessage');
 const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
@@ -28,7 +28,7 @@ async function postJson(path, payload) {
         body: JSON.stringify(payload)
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Não foi possível entrar');
+      if (!response.ok) throw new Error(data.error || 'Não foi possível cadastrar');
       return data;
     } catch (error) {
       if (baseUrl === API_BASE_CANDIDATES[API_BASE_CANDIDATES.length - 1]) {
@@ -36,24 +36,27 @@ async function postJson(path, payload) {
       }
     }
   }
-  throw new Error('Não foi possível entrar');
+  throw new Error('Não foi possível cadastrar');
 }
 
-loginForm?.addEventListener('submit', async (event) => {
+registerForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const payload = {
-    email: document.getElementById('loginEmail').value,
-    password: document.getElementById('loginPassword').value
+    name: document.getElementById('registerName').value,
+    email: document.getElementById('registerEmail').value,
+    password: document.getElementById('registerPassword').value
   };
 
   try {
-    await postJson('/api/auth/login', payload);
-    loginMessage.textContent = 'Login realizado com sucesso.';
-    loginMessage.style.color = '#2e7d32';
-    loginForm.reset();
-    window.location.href = '../products/products.html';
+    await postJson('/api/auth/register', payload);
+    registerMessage.textContent = 'Cadastro realizado com sucesso.';
+    registerMessage.style.color = '#2e7d32';
+    registerForm.reset();
+    setTimeout(() => {
+      window.location.href = '../login/login.html';
+    }, 800);
   } catch (error) {
-    loginMessage.textContent = error.message;
-    loginMessage.style.color = '#c76178';
+    registerMessage.textContent = error.message;
+    registerMessage.style.color = '#c76178';
   }
 });

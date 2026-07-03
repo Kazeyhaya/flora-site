@@ -20,7 +20,7 @@ button, input, select { font: inherit; }
 .topbar { position: sticky; top: 0; z-index: 20; background: rgba(63, 91, 71, 0.94); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(242, 143, 162, 0.2); }
 .nav-shell { display: flex; align-items: center; justify-content: space-between; min-height: 74px; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 10px; font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; }
-.brand-mark { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: center; border: 1px solid rgba(242, 143, 162, 0.35); }
+.brand-mark { display: block; width: 38px; height: 38px; object-fit: cover; object-position: center; clip-path: inset(6% round 50%); border: 0; background: transparent; }
 .nav-links { display: flex; gap: 10px; align-items: center; }
 .nav-links a { padding: 8px 12px; border-radius: 999px; font-weight: 600; }
 .nav-links a.active, .nav-links a:hover { background: rgba(242, 143, 162, 0.18); color: var(--text-strong); }

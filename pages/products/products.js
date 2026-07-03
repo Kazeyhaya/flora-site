@@ -3,6 +3,7 @@ const navLinks = document.getElementById('navLinks');
 const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 const productsGrid = document.getElementById('productsGrid');
+const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 let products = [];
 const categoryLabels = {
   kits: 'Kits',
@@ -11,6 +12,19 @@ const categoryLabels = {
   entregas: 'Mais vendidos',
   outros: 'Outros'
 };
+
+async function fetchApiJson(path) {
+  for (const baseUrl of API_BASE_CANDIDATES) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`);
+      if (!response.ok) continue;
+      return await response.json();
+    } catch (error) {
+      // tenta a proxima base
+    }
+  }
+  throw new Error('Falha ao consultar a API');
+}
 
 function toggleMenu(force) {
   const shouldOpen = typeof force === 'boolean' ? force : !navLinks.classList.contains('open');
@@ -53,8 +67,7 @@ function renderProducts() {
 
 async function loadProducts() {
   try {
-    const response = await fetch('/api/products');
-    const data = await response.json();
+    const data = await fetchApiJson('/api/products');
     products = Array.isArray(data.products) ? data.products : [];
     renderProducts();
   } catch (error) {

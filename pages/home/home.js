@@ -2,6 +2,20 @@ const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
 const featuredProducts = document.getElementById('featuredProducts');
 const currentYear = document.getElementById('currentYear');
+const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
+
+async function fetchApiJson(path) {
+  for (const baseUrl of API_BASE_CANDIDATES) {
+    try {
+      const response = await fetch(`${baseUrl}${path}`);
+      if (!response.ok) continue;
+      return await response.json();
+    } catch (error) {
+      // tenta a proxima base
+    }
+  }
+  throw new Error('Falha ao consultar a API');
+}
 
 function toggleMenu(force) {
   const shouldOpen = typeof force === 'boolean' ? force : !navLinks.classList.contains('open');
@@ -20,8 +34,7 @@ document.addEventListener('click', (event) => {
 
 async function loadFeaturedProducts() {
   try {
-    const response = await fetch('/api/products');
-    const data = await response.json();
+    const data = await fetchApiJson('/api/products');
     const items = Array.isArray(data.products) ? data.products.slice(0, 3) : [];
     if (!items.length) {
       featuredProducts.innerHTML = '<p>Não há produtos disponíveis no momento.</p>';
