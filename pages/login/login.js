@@ -4,13 +4,38 @@ const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 const REQUEST_TIMEOUT_MS = 8000;
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 let isSubmitting = false;
+
+function clearAuthSession() {
+  localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
+  localStorage.removeItem('floraSessionExpiresAt');
+}
 
 function getStoredUser() {
   try {
-    const raw = localStorage.getItem('floraUser');
-    return raw ? JSON.parse(raw) : null;
+    const rawUser = localStorage.getItem('floraUser');
+    const token = localStorage.getItem('floraToken');
+    if (!rawUser || !token) {
+      clearAuthSession();
+      return null;
+    }
+
+    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
+    const expiresAt = Number(expiresAtRaw);
+    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
+      clearAuthSession();
+      return null;
+    }
+
+    if (!Number.isFinite(expiresAt)) {
+      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
+    }
+
+    return JSON.parse(rawUser);
   } catch (error) {
+    clearAuthSession();
     return null;
   }
 }
@@ -90,6 +115,7 @@ loginForm?.addEventListener('submit', async (event) => {
     const data = await postJson('/api/auth/login', payload);
     const user = data.user || { name: payload.email.split('@')[0], email: payload.email };
     localStorage.setItem('floraUser', JSON.stringify(user));
+    localStorage.setItem('floraSessionExpiresAt', String(Date.now() + ((Number(data.expiresIn) || 8 * 60 * 60) * 1000)));
     if (data.token) {
       localStorage.setItem('floraToken', data.token);
     }

@@ -2,13 +2,39 @@ const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
 const featuredProducts = document.getElementById('featuredProducts');
 const currentYear = document.getElementById('currentYear');
+const heroAccountButton = document.getElementById('heroAccountButton');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
+
+function clearAuthSession() {
+  localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
+  localStorage.removeItem('floraSessionExpiresAt');
+}
 
 function getStoredUser() {
   try {
-    const raw = localStorage.getItem('floraUser');
-    return raw ? JSON.parse(raw) : null;
+    const rawUser = localStorage.getItem('floraUser');
+    const token = localStorage.getItem('floraToken');
+    if (!rawUser || !token) {
+      clearAuthSession();
+      return null;
+    }
+
+    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
+    const expiresAt = Number(expiresAtRaw);
+    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
+      clearAuthSession();
+      return null;
+    }
+
+    if (!Number.isFinite(expiresAt)) {
+      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
+    }
+
+    return JSON.parse(rawUser);
   } catch (error) {
+    clearAuthSession();
     return null;
   }
 }
@@ -21,6 +47,11 @@ function updateAuthNav() {
   document.querySelectorAll('[data-auth="user"]').forEach((item) => {
     item.classList.toggle('is-hidden', !user);
   });
+
+  if (heroAccountButton) {
+    heroAccountButton.textContent = user ? 'Minha Conta' : 'Entrar';
+    heroAccountButton.href = user ? '../account/account.html' : '../login/login.html';
+  }
 }
 
 async function fetchApiJson(path) {

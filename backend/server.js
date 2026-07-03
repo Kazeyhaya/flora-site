@@ -18,6 +18,9 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || supabaseKey;
+const AUTH_TOKEN_TTL_SECONDS = 8 * 60 * 60;
+const rateLimitStore = new Map();
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -52,7 +55,7 @@ function setSecurityHeaders(res) {
   // Adicionando CORS para permitir que a Vercel acesse a API
   res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 function sendJson(res, statusCode, payload) {
@@ -168,7 +171,116 @@ function getSafeFilePath(requestUrl) {
 }
 
 function hashPassword(password) {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `scrypt$${salt}$${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+  if (typeof storedHash !== 'string' || !storedHash) return false;
+
+  // Compatibilidade com legado sha256 (pode ser removido após migração)
+  if (!storedHash.startsWith('scrypt$')) {
+    const legacyHash = crypto.createHash('sha256').update(password).digest('hex');
+    return crypto.timingSafeEqual(Buffer.from(legacyHash), Buffer.from(storedHash));
+  }
+
+  const parts = storedHash.split('$');
+  if (parts.length !== 3) return false;
+  const [, salt, hash] = parts;
+  const computed = crypto.scryptSync(password, salt, 64).toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
+}
+
+function base64UrlEncode(input) {
+  return Buffer.from(input)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+}
+
+function base64UrlDecode(input) {
+  const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+
+function createAuthToken(user) {
+  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const now = Math.floor(Date.now() / 1000);
+  const payload = base64UrlEncode(JSON.stringify({
+    sub: user.id,
+    email: user.email,
+    name: user.name || user.nome,
+    role: user.role || 'cliente',
+    iat: now,
+    exp: now + AUTH_TOKEN_TTL_SECONDS
+  }));
+  const signature = crypto
+    .createHmac('sha256', AUTH_TOKEN_SECRET)
+    .update(`${header}.${payload}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+  return `${header}.${payload}.${signature}`;
+}
+
+function verifyAuthToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  const [header, payload, providedSig] = parts;
+  const expectedSig = crypto
+    .createHmac('sha256', AUTH_TOKEN_SECRET)
+    .update(`${header}.${payload}`)
+    .digest('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  if (expectedSig.length !== providedSig.length) return null;
+  const isValidSig = crypto.timingSafeEqual(Buffer.from(expectedSig), Buffer.from(providedSig));
+  if (!isValidSig) return null;
+
+  try {
+    const decoded = JSON.parse(base64UrlDecode(payload));
+    const now = Math.floor(Date.now() / 1000);
+    if (!decoded.exp || decoded.exp <= now) return null;
+    return decoded;
+  } catch (error) {
+    return null;
+  }
+}
+
+function extractBearerToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  return authHeader.slice(7).trim();
+}
+
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.socket.remoteAddress || 'unknown';
+}
+
+function isRateLimited(req, scope, maxAttempts, windowMs) {
+  const key = `${scope}:${getClientIp(req)}`;
+  const now = Date.now();
+  const attempts = rateLimitStore.get(key) || [];
+  const recent = attempts.filter((ts) => now - ts < windowMs);
+  if (recent.length >= maxAttempts) {
+    rateLimitStore.set(key, recent);
+    return true;
+  }
+  recent.push(now);
+  rateLimitStore.set(key, recent);
+  return false;
 }
 
 async function findUserByEmail(email) {
@@ -176,6 +288,16 @@ async function findUserByEmail(email) {
     .from('users')
     .select('id, nome, email, senha_hash, role')
     .eq('email', email)
+    .limit(1);
+  if (error) throw new Error('Erro ao consultar usuário');
+  return data?.[0] || null;
+}
+
+async function findUserById(id) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, nome, email, role')
+    .eq('id', id)
     .limit(1);
   if (error) throw new Error('Erro ao consultar usuário');
   return data?.[0] || null;
@@ -318,6 +440,9 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/auth/register') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
+    if (isRateLimited(req, 'register', 10, 10 * 60 * 1000)) {
+      return sendJson(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+    }
     try {
       const { name, email, password } = await readJsonBody(req);
       const validatedInput = validateRegistrationInput(name, email, password);
@@ -325,7 +450,13 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 409, { error: 'E-mail já cadastrado' });
       }
       const newUser = await createUser(validatedInput.name, validatedInput.email, hashPassword(validatedInput.password));
-      sendJson(res, 201, { message: 'Usuário cadastrado com sucesso', user: newUser });
+      const token = createAuthToken(newUser);
+      sendJson(res, 201, {
+        message: 'Usuário cadastrado com sucesso',
+        token,
+        expiresIn: AUTH_TOKEN_TTL_SECONDS,
+        user: newUser
+      });
     } catch (error) {
       sendJson(res, 400, { error: error.message || 'Erro ao cadastrar' });
     }
@@ -334,6 +465,9 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/auth/login') {
     if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
+    if (isRateLimited(req, 'login', 12, 10 * 60 * 1000)) {
+      return sendJson(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+    }
     try {
       const { email, password } = await readJsonBody(req);
       const cleanEmail = normalizeEmail(email);
@@ -342,17 +476,44 @@ const server = http.createServer(async (req, res) => {
       
       const user = await findUserByEmail(cleanEmail);
       const storedHash = user ? (user.senha_hash || user.password) : null;
-      if (!user || storedHash !== hashPassword(cleanPassword)) {
+      if (!user || !verifyPassword(cleanPassword, storedHash)) {
         return sendJson(res, 401, { error: 'Credenciais inválidas' });
       }
-      const token = crypto.randomBytes(16).toString('hex');
+
+      const safeUser = { id: user.id, name: user.nome, email: user.email, role: user.role || 'cliente' };
+      const token = createAuthToken(safeUser);
       sendJson(res, 200, {
         message: 'Login realizado com sucesso',
         token,
-        user: { id: user.id, name: user.name || user.nome, email: user.email }
+        expiresIn: AUTH_TOKEN_TTL_SECONDS,
+        user: safeUser
       });
     } catch (error) {
       sendJson(res, 400, { error: error.message || 'Erro ao fazer login' });
+    }
+    return;
+  }
+
+  if (pathname === '/api/auth/me') {
+    if (req.method !== 'GET') return sendJson(res, 405, { error: 'Método não permitido' });
+    try {
+      const token = extractBearerToken(req);
+      const payload = verifyAuthToken(token);
+      if (!payload) return sendJson(res, 401, { error: 'Sessão inválida ou expirada' });
+
+      const user = await findUserById(payload.sub);
+      if (!user) return sendJson(res, 401, { error: 'Usuário não encontrado' });
+
+      sendJson(res, 200, {
+        user: {
+          id: user.id,
+          name: user.nome,
+          email: user.email,
+          role: user.role || 'cliente'
+        }
+      });
+    } catch (error) {
+      sendJson(res, 401, { error: error.message || 'Não autorizado' });
     }
     return;
   }

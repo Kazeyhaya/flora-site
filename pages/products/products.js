@@ -4,6 +4,7 @@ const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 const productsGrid = document.getElementById('productsGrid');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 let products = [];
 const categoryLabels = {
   kits: 'Kits',
@@ -13,11 +14,35 @@ const categoryLabels = {
   outros: 'Outros'
 };
 
+function clearAuthSession() {
+  localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
+  localStorage.removeItem('floraSessionExpiresAt');
+}
+
 function getStoredUser() {
   try {
-    const raw = localStorage.getItem('floraUser');
-    return raw ? JSON.parse(raw) : null;
+    const rawUser = localStorage.getItem('floraUser');
+    const token = localStorage.getItem('floraToken');
+    if (!rawUser || !token) {
+      clearAuthSession();
+      return null;
+    }
+
+    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
+    const expiresAt = Number(expiresAtRaw);
+    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
+      clearAuthSession();
+      return null;
+    }
+
+    if (!Number.isFinite(expiresAt)) {
+      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
+    }
+
+    return JSON.parse(rawUser);
   } catch (error) {
+    clearAuthSession();
     return null;
   }
 }
