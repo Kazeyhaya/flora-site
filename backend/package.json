@@ -1,0 +1,13 @@
+{
+  "name": "flora-store-backend",
+  "version": "1.0.0",
+  "description": "Backend inicial para a loja Flora",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.35.0",
+    "better-sqlite3": "^12.11.1"
+  }
+}

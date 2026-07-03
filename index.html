@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flora · Maquiagens & Cosméticos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar" id="navbar">
+      <div class="container">
+        <a href="#" class="logo">
+          <img src="flora.jpg" alt="Logo Flora" />
+          <span class="brand-text"><span>Flora</span><span>· Maquiagens e Cosméticos</span></span>
+        </a>
+
+        <ul class="nav-links" id="navLinks">
+          <li><a href="#produtos">Produtos</a></li>
+          <li><a href="#kits">Kits</a></li>
+          <li><a href="#clientes">Clientes</a></li>
+          <li><a href="#pedidos">Pedidos</a></li>
+          <li><a href="#entregas">Entregas</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <div class="search-panel" id="searchPanel">
+            <input type="search" id="productSearch" placeholder="Buscar produto..." aria-label="Buscar produto" />
+            <button type="button" id="clearSearch" aria-label="Limpar busca"><i class="fas fa-times"></i></button>
+          </div>
+          <button class="icon-btn" id="searchToggle" aria-label="Buscar"><i class="fas fa-search"></i></button>
+          <button class="icon-btn" aria-label="Carrinho">
+            <i class="fas fa-shopping-bag"></i>
+            <span class="badge">3</span>
+          </button>
+          <button class="menu-toggle" id="menuToggle" aria-label="Menu"><i class="fas fa-bars"></i></button>
+        </div>
+      </div>
+    </nav>
+
+    <section class="hero" id="inicio">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <h1>A beleza que <em>floresce em você</em></h1>
+          <p class="tagline">Maquiagens e cosméticos com essência natural para uma rotina leve e elegante.</p>
+          <div class="hero-badges">
+            <span class="badge"><i class="fas fa-map-pin"></i> Teresina · PI</span>
+            <span class="badge"><i class="fas fa-store"></i> Loja Online</span>
+            <span class="badge"><i class="fas fa-truck"></i> Entregas</span>
+          </div>
+          <div class="hero-cta">
+            <a href="#produtos" class="btn-primary"><i class="fas fa-shopping-bag"></i> Explorar produtos</a>
+            <a href="#promocao" class="btn-secondary"><i class="fas fa-gift"></i> Ver promoções</a>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="floral-ring">
+            <span class="leaf">🌿</span><span class="leaf">🌸</span><span class="leaf">🌱</span><span class="leaf">🌷</span><span class="leaf">🌻</span><span class="leaf">🌺</span>
+            <div class="inner">
+              <i class="fas fa-seedling"></i>
+              <h3>Flora</h3>
+              <p>Beleza Natural</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="categories" id="categorias">
+      <div class="container">
+        <button class="cat-item active" data-category="todos"><i class="fas fa-th-large"></i> Todos</button>
+        <button class="cat-item" data-category="kits"><i class="fas fa-box"></i> Kits</button>
+        <button class="cat-item" data-category="clientes"><i class="fas fa-user-friends"></i> Clientes</button>
+        <button class="cat-item" data-category="pedidos"><i class="fas fa-clipboard-list"></i> Pedidos</button>
+        <button class="cat-item" data-category="entregas"><i class="fas fa-shipping-fast"></i> Entregas</button>
+      </div>
+    </section>
+
+    <section class="products" id="produtos">
+      <div class="container">
+        <div class="section-title">
+          <h2><i class="fas fa-leaf"></i> Nossos destaques</h2>
+          <p>Produtos com boa apresentação e espaço para crescer junto com a loja.</p>
+        </div>
+
+        <div class="products-grid" id="productsGrid" aria-live="polite"></div>
+        <div class="empty-state" id="emptyState">
+          <i class="fas fa-search"></i>
+          <strong>Nenhum produto encontrado</strong>
+          <span>Tente outra busca ou selecione outra categoria.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="promo-banner" id="promocao">
+      <div class="container promo-container">
+        <div>
+          <h3><i class="fas fa-gift"></i> Brinde especial</h3>
+          <p>Ganhe uma Gelatin exclusiva em compras acima de R$39,99.</p>
+        </div>
+        <div class="promo-cta">
+          <span class="big-number">R$39,99 <small>+ brinde</small></span>
+          <a href="#produtos" class="btn-primary gold"><i class="fas fa-shopping-cart"></i> Aproveitar</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="auth-section" id="clientes">
+      <div class="container auth-grid">
+        <div class="auth-panel">
+          <h2><i class="fas fa-user-plus"></i> Criar conta</h2>
+          <form id="registerForm" class="auth-form">
+            <input type="text" id="registerName" placeholder="Seu nome" required />
+            <input type="email" id="registerEmail" placeholder="Seu e-mail" required />
+            <input type="password" id="registerPassword" placeholder="Sua senha" required />
+            <button type="submit" class="btn-primary">Cadastrar</button>
+          </form>
+          <p id="registerMessage" class="auth-message"></p>
+        </div>
+
+        <div class="auth-panel">
+          <h2><i class="fas fa-sign-in-alt"></i> Já tenho conta</h2>
+          <form id="loginForm" class="auth-form">
+            <input type="email" id="loginEmail" placeholder="Seu e-mail" required />
+            <input type="password" id="loginPassword" placeholder="Sua senha" required />
+            <button type="submit" class="btn-secondary">Entrar</button>
+          </form>
+          <p id="loginMessage" class="auth-message"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="gift-section" id="kits">
+      <div class="container gift-grid">
+        <div class="gift-content">
+          <h2><i class="fas fa-sparkles"></i> Três produtos que vão salvar sua rotina!</h2>
+          <p>Combine Rosa Mosqueta, Clareador e Pure Mineral Blush para um resultado mais bonito e funcional.</p>
+          <div class="gift-items">
+            <span class="gift-tag"><i class="fas fa-check-circle"></i> Rosa Mosqueta</span>
+            <span class="gift-tag"><i class="fas fa-check-circle"></i> Clareador</span>
+            <span class="gift-tag"><i class="fas fa-check-circle"></i> Pure Mineral Blush</span>
+          </div>
+        </div>
+        <div class="gift-visual">
+          <div class="gift-box"><i class="fas fa-hand-holding-heart"></i><h4>Rosa Mosqueta</h4><p>Regeneração e vitalidade</p></div>
+          <div class="gift-box"><i class="fas fa-sun"></i><h4>Clareador</h4><p>Luz e uniformidade</p></div>
+          <div class="gift-box"><i class="fas fa-feather"></i><h4>Pure Mineral Blush</h4><p>Toque aveludado</p></div>
+          <div class="gift-box gold-box"><i class="fas fa-gift"></i><h4>Brinde Gelatin</h4><p>Presente exclusivo</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="container stats-grid">
+        <div class="stat-item"><div class="number" id="usersCount">0</div><div class="label">Usuários cadastrados</div></div>
+        <div class="stat-item"><div class="number" id="ordersCount">0</div><div class="label">Pedidos realizados</div></div>
+        <div class="stat-item"><div class="number" id="pendingOrdersCount">0</div><div class="label">Pedidos pendentes</div></div>
+        <div class="stat-item"><div class="number">1.007</div><div class="label">Avaliações 5★</div></div>
+      </div>
+    </section>
+
+    <footer class="footer" id="entregas">
+      <div class="container footer-grid">
+        <div class="brand">
+          <h3><img src="flora.jpg" alt="Flora" /> Flora · maquiagens e cosméticos</h3>
+          <p>A beleza que floresce em você. Uma estrutura preparada para crescer com organização.</p>
+          <div class="socials">
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+            <a href="#" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+          </div>
+        </div>
+        <div class="col">
+          <h4>Institucional</h4>
+          <ul><li><a href="#">Sobre a Flora</a></li><li><a href="#">Inauguração</a></li><li><a href="#">Nossas lojas</a></li><li><a href="#">Trabalhe conosco</a></li></ul>
+        </div>
+        <div class="col">
+          <h4>Atendimento</h4>
+          <ul><li><a href="#">Entregas</a></li><li><a href="#">Trocas e devoluções</a></li><li><a href="#">Política de privacidade</a></li><li><a href="#">Fale conosco</a></li></ul>
+        </div>
+        <div class="col">
+          <h4>Contato</h4>
+          <ul><li><a href="#"><i class="fas fa-map-pin"></i> Teresina · PI</a></li><li><a href="#"><i class="fas fa-store"></i> Loja Online</a></li><li><a href="#"><i class="fas fa-phone"></i> (86) 9 9999-9999</a></li><li><a href="#"><i class="fas fa-envelope"></i> flora@cosmeticos.com</a></li></ul>
+        </div>
+        <div class="bottom">© 2026 Flora · Maquiagens e Cosméticos. Todos os direitos reservados.</div>
+      </div>
+    </footer>
+
+    <script src="js/app.js"></script>
+  </body>
+</html>
