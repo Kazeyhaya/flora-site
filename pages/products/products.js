@@ -13,6 +13,25 @@ const categoryLabels = {
   outros: 'Outros'
 };
 
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem('floraUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function updateAuthNav() {
+  const user = getStoredUser();
+  document.querySelectorAll('[data-auth="guest"]').forEach((item) => {
+    item.classList.toggle('is-hidden', Boolean(user));
+  });
+  document.querySelectorAll('[data-auth="user"]').forEach((item) => {
+    item.classList.toggle('is-hidden', !user);
+  });
+}
+
 async function fetchApiJson(path) {
   for (const baseUrl of API_BASE_CANDIDATES) {
     try {
@@ -77,4 +96,5 @@ async function loadProducts() {
 
 searchInput.addEventListener('input', renderProducts);
 categoryFilter.addEventListener('change', renderProducts);
+updateAuthNav();
 loadProducts();

@@ -26,6 +26,7 @@ button, input { font: inherit; }
 .nav-links { display: flex; gap: 10px; align-items: center; }
 .nav-links a { padding: 8px 12px; border-radius: 999px; font-weight: 600; }
 .nav-links a.active, .nav-links a:hover { background: rgba(242, 143, 162, 0.18); color: var(--text-strong); }
+.is-hidden { display: none !important; }
 .menu-toggle { display: none; background: transparent; border: 0; font-size: 1.2rem; color: var(--text-strong); }
 .hero { padding: 72px 0 56px; background: linear-gradient(125deg, var(--green-dark) 0%, var(--cream-strong) 100%); }
 .hero-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 28px; align-items: center; }

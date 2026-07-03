@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flora · Login</title>
+    <title>Flora · Minha Conta</title>
     <link rel="icon" type="image/jpeg" href="../../flora.jpg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <link rel="stylesheet" href="./login.css" />
+    <link rel="stylesheet" href="./account.css" />
   </head>
   <body>
     <header class="topbar">
@@ -24,37 +24,39 @@
         <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
           <a href="../home/home.html">Home</a>
           <a href="../products/products.html">Produtos</a>
-          <a href="./login.html" class="active" data-auth="guest">Login</a>
-          <a href="../account/account.html" data-auth="user" class="is-hidden">Minha Conta</a>
+          <a href="../login/login.html" data-auth="guest">Login</a>
+          <a href="./account.html" class="active" data-auth="user">Minha Conta</a>
         </nav>
       </div>
     </header>
 
-    <main class="page-shell">
+    <main class="container page">
       <section class="card">
-        <div class="card-header">
-          <p class="eyebrow">Área do cliente</p>
-          <h1>Entrar na Flora</h1>
-          <p>Acesse sua conta para continuar navegando pelo catálogo.</p>
+        <h1>Minha Conta</h1>
+        <p class="subtitle">Informações da sua conta e histórico de compras.</p>
+        <div class="info-grid">
+          <article class="info-item">
+            <h2>Nome</h2>
+            <p id="accountName">-</p>
+          </article>
+          <article class="info-item">
+            <h2>E-mail</h2>
+            <p id="accountEmail">-</p>
+          </article>
         </div>
-        <form id="loginForm" class="form">
-          <label>
-            E-mail
-            <input type="email" id="loginEmail" placeholder="seu@email.com" required />
-          </label>
-          <label>
-            Senha
-            <input type="password" id="loginPassword" placeholder="Sua senha" required />
-          </label>
-          <div class="actions">
-            <button class="btn btn-primary" type="submit">Entrar</button>
-            <a class="btn btn-secondary" href="../home/home.html">Voltar para home</a>
-          </div>
-        </form>
-        <p class="helper-link">Não tem cadastro? <a href="../register/register.html">Cadastre-se</a></p>
-        <p id="loginMessage" class="feedback"></p>
+        <article class="history">
+          <h2>Histórico de compras</h2>
+          <ul id="purchaseHistory">
+            <li>Nenhuma compra registrada ainda.</li>
+          </ul>
+        </article>
+        <div class="actions">
+          <a class="btn btn-secondary" href="../products/products.html">Continuar comprando</a>
+          <button id="logoutButton" class="btn btn-primary" type="button">Sair da conta</button>
+        </div>
       </section>
     </main>
-    <script src="./login.js"></script>
+
+    <script src="./account.js"></script>
   </body>
 </html>

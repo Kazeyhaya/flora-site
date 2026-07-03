@@ -4,6 +4,25 @@ const featuredProducts = document.getElementById('featuredProducts');
 const currentYear = document.getElementById('currentYear');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem('floraUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function updateAuthNav() {
+  const user = getStoredUser();
+  document.querySelectorAll('[data-auth="guest"]').forEach((item) => {
+    item.classList.toggle('is-hidden', Boolean(user));
+  });
+  document.querySelectorAll('[data-auth="user"]').forEach((item) => {
+    item.classList.toggle('is-hidden', !user);
+  });
+}
+
 async function fetchApiJson(path) {
   for (const baseUrl of API_BASE_CANDIDATES) {
     try {
@@ -54,4 +73,5 @@ async function loadFeaturedProducts() {
 }
 
 currentYear.textContent = new Date().getFullYear();
+updateAuthNav();
 loadFeaturedProducts();

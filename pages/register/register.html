@@ -24,8 +24,8 @@
         <nav class="nav-links" id="navLinks" aria-label="Navegação principal">
           <a href="../home/home.html">Home</a>
           <a href="../products/products.html">Produtos</a>
-          <a href="../login/login.html">Login</a>
-          <a href="./register.html" class="active">Cadastro</a>
+          <a href="../login/login.html" data-auth="guest">Login</a>
+          <a href="../account/account.html" data-auth="user" class="is-hidden">Minha Conta</a>
         </nav>
       </div>
     </header>
@@ -55,6 +55,7 @@
             <a class="btn btn-secondary" href="../home/home.html">Voltar para home</a>
           </div>
         </form>
+        <p class="helper-link">Já tem cadastro? <a href="../login/login.html">Entrar</a></p>
         <p id="registerMessage" class="feedback"></p>
       </section>
     </main>

@@ -21,6 +21,7 @@ body.menu-open { overflow: hidden; }
 .nav-links { display: flex; gap: 10px; align-items: center; }
 .nav-links a { padding: 8px 12px; border-radius: 999px; font-weight: 600; color: var(--text); text-decoration: none; }
 .nav-links a.active, .nav-links a:hover { background: rgba(242, 143, 162, 0.18); color: var(--text-strong); }
+.is-hidden { display: none !important; }
 .menu-toggle { display: none; background: transparent; border: 0; font-size: 1.2rem; color: var(--text-strong); }
 .page-shell { min-height: calc(100vh - 74px); display: grid; place-items: center; padding: 24px; }
 .card { width: min(460px, 100%); background: rgba(77, 110, 86, 0.95); border: 1px solid var(--border); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); color: var(--text-strong); }
@@ -34,6 +35,8 @@ input { border: 1px solid var(--border); border-radius: 999px; padding: 12px 14p
 .btn-primary { background: var(--rose); color: white; }
 .btn-secondary { border: 1px solid var(--rose); color: var(--text-strong); background: transparent; }
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.helper-link { margin-top: 8px; font-size: 0.95rem; }
+.helper-link a { color: var(--green); font-weight: 600; }
 .feedback { min-height: 1.2rem; margin: 10px 0 14px; font-weight: 600; }
 
 @media (max-width: 760px) {
