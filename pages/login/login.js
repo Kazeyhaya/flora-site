@@ -19,7 +19,7 @@ loginForm?.addEventListener('submit', async (event) => {
     loginMessage.textContent = 'Login realizado com sucesso.';
     loginMessage.style.color = '#2e7d32';
     loginForm.reset();
-    window.location.href = '../admin/admin.html';
+    window.location.href = '../products/products.html';
   } catch (error) {
     loginMessage.textContent = error.message;
     loginMessage.style.color = '#c76178';

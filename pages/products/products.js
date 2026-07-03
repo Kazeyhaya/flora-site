@@ -4,6 +4,13 @@ const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
 const productsGrid = document.getElementById('productsGrid');
 let products = [];
+const categoryLabels = {
+  kits: 'Kits',
+  clientes: 'Skincare',
+  pedidos: 'Acessorios',
+  entregas: 'Mais vendidos',
+  outros: 'Outros'
+};
 
 function toggleMenu(force) {
   const shouldOpen = typeof force === 'boolean' ? force : !navLinks.classList.contains('open');
@@ -36,7 +43,7 @@ function renderProducts() {
 
   productsGrid.innerHTML = filtered.map((product) => `
     <article class="product-card">
-      <span class="tag">${product.category}</span>
+      <span class="tag">${categoryLabels[product.category] || 'Outros'}</span>
       <h3>${product.name}</h3>
       <p>${product.description}</p>
       <div class="price">R$ ${Number(product.price).toFixed(2).replace('.', ',')}</div>
