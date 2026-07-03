@@ -16,6 +16,7 @@ const loginMessage = document.getElementById('loginMessage');
 const usersCount = document.getElementById('usersCount');
 const ordersCount = document.getElementById('ordersCount');
 const pendingOrdersCount = document.getElementById('pendingOrdersCount');
+const API_BASE_URL = 'https://backend-flora.onrender.com';
 let activeCategory = 'todos';
 let cartCount = 3;
 let products = [];
@@ -167,7 +168,7 @@ catItems.forEach((item) => {
 
 async function loadProducts() {
   try {
-    const response = await fetch('/api/products');
+    const response = await fetch(`${API_BASE_URL}/api/products`);
     const data = await response.json();
     products = Array.isArray(data.products) ? data.products : [];
     renderProducts();
@@ -205,7 +206,7 @@ async function submitAuthForm(form, endpoint, messageEl, successMessage) {
 
 async function loadDashboard() {
   try {
-    const response = await fetch('/api/admin/dashboard');
+    const response = await fetch(`${API_BASE_URL}/api/admin/dashboard`);
     const data = await response.json();
     usersCount.textContent = data.users ?? 0;
     ordersCount.textContent = data.orders ?? 0;
@@ -219,12 +220,12 @@ async function loadDashboard() {
 
 registerForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  submitAuthForm(registerForm, '/api/auth/register', registerMessage, 'Conta criada com sucesso!');
+  submitAuthForm(registerForm, `${API_BASE_URL}/api/auth/register`, registerMessage, 'Conta criada com sucesso!');
 });
 
 loginForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  submitAuthForm(loginForm, '/api/auth/login', loginMessage, 'Login realizado com sucesso!');
+  submitAuthForm(loginForm, `${API_BASE_URL}/api/auth/login`, loginMessage, 'Login realizado com sucesso!');
 });
 
 window.addEventListener('scroll', () => {
