@@ -6,44 +6,18 @@ const { createClient } = require('@supabase/supabase-js');
 
 const port = process.env.PORT || 3000;
 const rootDir = path.join(__dirname, '..');
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'data', 'flora.db');
+
+// Conexão exclusiva com o Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const useSupabase = Boolean(supabaseUrl && supabaseKey);
+// Tenta pegar a Service Role Key primeiro, senão usa a normal
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
-let db;
-let supabase;
-let Database;
-
-if (useSupabase) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  Database = require('better-sqlite3');
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  db = new Database(dbPath);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT NOT NULL UNIQUE,
-      password TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_name TEXT NOT NULL,
-      customer_email TEXT NOT NULL,
-      total REAL NOT NULL,
-      status TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+if (!supabaseUrl || !supabaseKey) {
+  console.error('ERRO FATAL: Variáveis de ambiente do Supabase não configuradas.');
+  process.exit(1);
 }
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -59,69 +33,14 @@ const mimeTypes = {
 
 const MAX_BODY_SIZE = 1024 * 1024;
 
+// Produtos de fallback em memória (caso precise)
 const products = [
-  {
-    id: 1,
-    name: 'Blush bastão',
-    category: 'kits',
-    price: 15.99,
-    description: 'Pigmento cremoso · acabamento natural',
-    icon: 'fas fa-palette',
-    color: '#fce4e4',
-    textColor: '#d47a7a',
-    badge: 'Novo'
-  },
-  {
-    id: 2,
-    name: 'Serum facial',
-    category: 'kits',
-    price: 15.99,
-    description: 'Hidratação profunda · antioxidante',
-    icon: 'fas fa-flask',
-    color: '#e0f0e0',
-    textColor: '#5a9a5a',
-    badge: '+ Brinde'
-  },
-  {
-    id: 3,
-    name: 'Rosa Mosqueta',
-    category: 'entregas',
-    price: 19.9,
-    description: 'Óleo regenerador · cicatrizante',
-    icon: 'fas fa-oil-can',
-    color: '#fce4d6',
-    textColor: '#c97a4a'
-  },
-  {
-    id: 4,
-    name: 'Clarador',
-    category: 'clientes',
-    price: 22.5,
-    description: 'Uniformiza o tom · luminosidade',
-    icon: 'fas fa-star',
-    color: '#e8e0f0',
-    textColor: '#8a6aaa'
-  },
-  {
-    id: 5,
-    name: 'Pure Mineral Blush',
-    category: 'clientes',
-    price: 18.9,
-    description: 'Mineral · acabamento aveludado',
-    icon: 'fas fa-gem',
-    color: '#f0e4d6',
-    textColor: '#b88a6a'
-  },
-  {
-    id: 6,
-    name: 'Prendedor de Pelúcia',
-    category: 'pedidos',
-    price: 12,
-    description: 'Acessório fofo · para cabelo',
-    icon: 'fas fa-paw',
-    color: '#f0e8e8',
-    textColor: '#b08a8a'
-  }
+  { id: 1, name: 'Blush bastão', category: 'kits', price: 15.99, description: 'Pigmento cremoso · acabamento natural', icon: 'fas fa-palette', color: '#fce4e4', textColor: '#d47a7a', badge: 'Novo' },
+  { id: 2, name: 'Serum facial', category: 'kits', price: 15.99, description: 'Hidratação profunda · antioxidante', icon: 'fas fa-flask', color: '#e0f0e0', textColor: '#5a9a5a', badge: '+ Brinde' },
+  { id: 3, name: 'Rosa Mosqueta', category: 'entregas', price: 19.9, description: 'Óleo regenerador · cicatrizante', icon: 'fas fa-oil-can', color: '#fce4d6', textColor: '#c97a4a' },
+  { id: 4, name: 'Clarador', category: 'clientes', price: 22.5, description: 'Uniformiza o tom · luminosidade', icon: 'fas fa-star', color: '#e8e0f0', textColor: '#8a6aaa' },
+  { id: 5, name: 'Pure Mineral Blush', category: 'clientes', price: 18.9, description: 'Mineral · acabamento aveludado', icon: 'fas fa-gem', color: '#f0e4d6', textColor: '#b88a6a' },
+  { id: 6, name: 'Prendedor de Pelúcia', category: 'pedidos', price: 12, description: 'Acessório fofo · para cabelo', icon: 'fas fa-paw', color: '#f0e8e8', textColor: '#b08a8a' }
 ];
 
 function setSecurityHeaders(res) {
@@ -130,6 +49,10 @@ function setSecurityHeaders(res) {
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
   res.setHeader('Cache-Control', 'no-store');
+  // Adicionando CORS para permitir que a Vercel acesse a API
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
 function sendJson(res, statusCode, payload) {
@@ -146,7 +69,6 @@ function serveStatic(res, filePath) {
       res.end('Arquivo não encontrado');
       return;
     }
-
     const ext = path.extname(filePath);
     const contentType = mimeTypes[ext] || 'application/octet-stream';
     res.writeHead(200, { 'Content-Type': contentType });
@@ -158,7 +80,6 @@ function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
     let size = 0;
-
     req.on('data', (chunk) => {
       size += chunk.length;
       if (size > MAX_BODY_SIZE) {
@@ -166,16 +87,10 @@ function readJsonBody(req) {
         req.destroy();
         return;
       }
-
       body += chunk;
     });
-
     req.on('end', () => {
-      if (!body) {
-        resolve({});
-        return;
-      }
-
+      if (!body) return resolve({});
       try {
         resolve(JSON.parse(body));
       } catch (error) {
@@ -202,19 +117,9 @@ function validateRegistrationInput(name, email, password) {
   const cleanName = sanitizeText(name);
   const cleanEmail = normalizeEmail(email);
   const cleanPassword = typeof password === 'string' ? password.trim() : '';
-
-  if (cleanName.length < 2 || cleanName.length > 100) {
-    throw new Error('Nome deve ter entre 2 e 100 caracteres');
-  }
-
-  if (!isValidEmail(cleanEmail)) {
-    throw new Error('E-mail inválido');
-  }
-
-  if (cleanPassword.length < 6 || cleanPassword.length > 128) {
-    throw new Error('Senha deve ter entre 6 e 128 caracteres');
-  }
-
+  if (cleanName.length < 2 || cleanName.length > 100) throw new Error('Nome deve ter entre 2 e 100 caracteres');
+  if (!isValidEmail(cleanEmail)) throw new Error('E-mail inválido');
+  if (cleanPassword.length < 6 || cleanPassword.length > 128) throw new Error('Senha deve ter entre 6 e 128 caracteres');
   return { name: cleanName, email: cleanEmail, password: cleanPassword };
 }
 
@@ -224,23 +129,10 @@ function validateOrderInput(customerName, customerEmail, total, status, formaPag
   const cleanStatus = sanitizeText(status || 'pendente');
   const cleanPayment = sanitizeText(formaPagamento || 'não informado');
   const numericTotal = Number(total);
-
-  if (!cleanName || cleanName.length > 100) {
-    throw new Error('Nome do cliente inválido');
-  }
-
-  if (!isValidEmail(cleanEmail)) {
-    throw new Error('E-mail do cliente inválido');
-  }
-
-  if (!Number.isFinite(numericTotal) || numericTotal <= 0) {
-    throw new Error('Total inválido');
-  }
-
-  if (!['pendente', 'aprovado', 'cancelado'].includes(cleanStatus.toLowerCase())) {
-    throw new Error('Status inválido');
-  }
-
+  if (!cleanName || cleanName.length > 100) throw new Error('Nome do cliente inválido');
+  if (!isValidEmail(cleanEmail)) throw new Error('E-mail do cliente inválido');
+  if (!Number.isFinite(numericTotal) || numericTotal <= 0) throw new Error('Total inválido');
+  if (!['pendente', 'aprovado', 'cancelado'].includes(cleanStatus.toLowerCase())) throw new Error('Status inválido');
   return {
     customerName: cleanName,
     customerEmail: cleanEmail,
@@ -255,7 +147,6 @@ function containsPathTraversal(requestUrl) {
     const rawPath = (requestUrl || '/').split('?')[0];
     const decodedPath = decodeURIComponent(rawPath);
     const normalizedPath = decodedPath.replace(/\\/g, '/');
-
     return normalizedPath.includes('/..') || normalizedPath === '..' || normalizedPath.startsWith('../') || normalizedPath.endsWith('/..') || rawPath.includes('%2e') || rawPath.includes('%2f') || rawPath.includes('%5c');
   } catch (error) {
     return true;
@@ -263,20 +154,13 @@ function containsPathTraversal(requestUrl) {
 }
 
 function getSafeFilePath(requestUrl) {
-  if (containsPathTraversal(requestUrl)) {
-    return null;
-  }
-
+  if (containsPathTraversal(requestUrl)) return null;
   try {
     const parsedUrl = new URL(requestUrl, 'http://localhost');
     const decodedPath = decodeURIComponent(parsedUrl.pathname || '/');
     const candidatePath = path.resolve(rootDir, `.${decodedPath}`);
     const rootPath = path.resolve(rootDir);
-
-    if (candidatePath !== rootPath && !candidatePath.startsWith(rootPath + path.sep)) {
-      return null;
-    }
-
+    if (candidatePath !== rootPath && !candidatePath.startsWith(rootPath + path.sep)) return null;
     return candidatePath;
   } catch (error) {
     return null;
@@ -288,174 +172,116 @@ function hashPassword(password) {
 }
 
 async function findUserByEmail(email) {
-  if (useSupabase) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('id, nome, email, senha_hash, role')
-      .eq('email', email)
-      .limit(1);
-
-    if (error) {
-      throw new Error('Erro ao consultar usuário');
-    }
-
-    return data?.[0] || null;
-  }
-
-  return db.prepare('SELECT * FROM users WHERE lower(email) = lower(?)').get(email);
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, nome, email, senha_hash, role')
+    .eq('email', email)
+    .limit(1);
+  if (error) throw new Error('Erro ao consultar usuário');
+  return data?.[0] || null;
 }
 
 async function createUser(name, email, passwordHash) {
-  if (useSupabase) {
-    const { data, error } = await supabase
-      .from('users')
-      .insert({ nome: name, email, senha_hash: passwordHash, role: 'cliente' })
-      .select('id, nome, email')
-      .single();
-
-    if (error) {
-      throw new Error('Erro ao criar usuário');
-    }
-
-    return { id: data.id, name: data.nome, email: data.email };
-  }
-
-  const stmt = db.prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)');
-  const info = stmt.run(name, email, passwordHash);
-  return db.prepare('SELECT id, name, email FROM users WHERE id = ?').get(info.lastInsertRowid);
+  const { data, error } = await supabase
+    .from('users')
+    .insert({ nome: name, email, senha_hash: passwordHash, role: 'cliente' })
+    .select('id, nome, email')
+    .single();
+  if (error) throw new Error('Erro ao criar usuário');
+  return { id: data.id, name: data.nome, email: data.email };
 }
 
 async function findCustomerByUserId(userId) {
-  if (useSupabase) {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error('Erro ao consultar cliente');
-    }
-
-    return data || null;
-  }
-
-  return null;
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw new Error('Erro ao consultar cliente');
+  return data || null;
 }
 
 async function createCustomer(userId, cpfCnpj, telefone, endereco) {
-  if (useSupabase) {
-    const { data, error } = await supabase
-      .from('customers')
-      .insert({ user_id: userId, cpf_cnpj: cpfCnpj, telefone, endereco })
-      .select('id, user_id, cpf_cnpj, telefone, endereco')
-      .single();
-
-    if (error) {
-      throw new Error('Erro ao criar cliente');
-    }
-
-    return data;
-  }
-
-  return null;
+  const { data, error } = await supabase
+    .from('customers')
+    .insert({ user_id: userId, cpf_cnpj: cpfCnpj, telefone, endereco })
+    .select('id, user_id, cpf_cnpj, telefone, endereco')
+    .single();
+  if (error) throw new Error('Erro ao criar cliente');
+  return data;
 }
 
 async function createOrderItem(orderId, item) {
   if (!item || !item.product_id || !Number.isFinite(Number(item.quantidade)) || Number(item.quantidade) <= 0 || !Number.isFinite(Number(item.valor_unitario))) {
     throw new Error('Item de pedido inválido');
   }
-
-  if (useSupabase) {
-    const { data, error } = await supabase
-      .from('order_items')
-      .insert({
-        order_id: orderId,
-        product_id: item.product_id,
-        quantidade: Number(item.quantidade),
-        valor_unitario: Number(item.valor_unitario)
-      })
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error('Erro ao criar item do pedido');
-    }
-
-    return data;
-  }
-
-  return null;
+  const { data, error } = await supabase
+    .from('order_items')
+    .insert({
+      order_id: orderId,
+      product_id: item.product_id,
+      quantidade: Number(item.quantidade),
+      valor_unitario: Number(item.valor_unitario)
+    })
+    .select('*')
+    .single();
+  if (error) throw new Error('Erro ao criar item do pedido');
+  return data;
 }
 
 async function createOrder(customerName, customerEmail, total, status, formaPagamento = 'não informado', items = []) {
-  if (useSupabase) {
-    let user = await findUserByEmail(customerEmail);
-    if (!user) {
-      const randomPassword = crypto.randomBytes(12).toString('hex');
-      user = await createUser(customerName, customerEmail, hashPassword(randomPassword));
-    }
-
-    let customer = await findCustomerByUserId(user.id);
-    if (!customer) {
-      customer = await createCustomer(user.id, null, null, null);
-    }
-
-    const { data, error } = await supabase
-      .from('orders')
-      .insert({
-        customer_id: customer.id,
-        valor_total: total,
-        status,
-        forma_pagamento: formaPagamento
-      })
-      .select('*')
-      .single();
-
-    if (error) {
-      throw new Error('Erro ao criar pedido');
-    }
-
-    if (Array.isArray(items) && items.length) {
-      await Promise.all(items.map((item) => createOrderItem(data.id, item)));
-    }
-
-    return data;
+  let user = await findUserByEmail(customerEmail);
+  if (!user) {
+    const randomPassword = crypto.randomBytes(12).toString('hex');
+    user = await createUser(customerName, customerEmail, hashPassword(randomPassword));
   }
-
-  const stmt = db.prepare('INSERT INTO orders (customer_name, customer_email, total, status) VALUES (?, ?, ?, ?)');
-  const info = stmt.run(customerName, customerEmail, total, status);
-  return db.prepare('SELECT * FROM orders WHERE id = ?').get(info.lastInsertRowid);
+  let customer = await findCustomerByUserId(user.id);
+  if (!customer) {
+    customer = await createCustomer(user.id, null, null, null);
+  }
+  const { data, error } = await supabase
+    .from('orders')
+    .insert({
+      customer_id: customer.id,
+      valor_total: total,
+      status,
+      forma_pagamento: formaPagamento
+    })
+    .select('*')
+    .single();
+  if (error) throw new Error('Erro ao criar pedido');
+  if (Array.isArray(items) && items.length) {
+    await Promise.all(items.map((item) => createOrderItem(data.id, item)));
+  }
+  return data;
 }
 
 async function getAdminDashboard() {
-  if (useSupabase) {
-    const [usersRes, ordersRes, pendingRes] = await Promise.all([
-      supabase.from('users').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('id', { count: 'exact', head: true }),
-      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pendente')
-    ]);
-
-    if (usersRes.error || ordersRes.error || pendingRes.error) {
-      throw new Error('Erro ao consultar painel administrativo');
-    }
-
-    return {
-      users: usersRes.count || 0,
-      orders: ordersRes.count || 0,
-      pendingOrders: pendingRes.count || 0
-    };
+  const [usersRes, ordersRes, pendingRes] = await Promise.all([
+    supabase.from('users').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }),
+    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pendente')
+  ]);
+  if (usersRes.error || ordersRes.error || pendingRes.error) {
+    throw new Error('Erro ao consultar painel administrativo');
   }
-
-  const usersCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  const ordersCount = db.prepare('SELECT COUNT(*) as count FROM orders').get().count;
-  const pendingOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'pendente'").get().count;
-
-  return { users: usersCount, orders: ordersCount, pendingOrders };
+  return {
+    users: usersRes.count || 0,
+    orders: ordersRes.count || 0,
+    pendingOrders: pendingRes.count || 0
+  };
 }
 
 const server = http.createServer(async (req, res) => {
   const url = req.url || '/';
+
+  // Responde rapidamente às requisições preflight do CORS
+  if (req.method === 'OPTIONS') {
+    setSecurityHeaders(res);
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   if (url === '/api/health') {
     sendJson(res, 200, { status: 'ok', service: 'flora-store-backend' });
@@ -463,60 +289,42 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url === '/api/products') {
-    if (useSupabase) {
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('id, nome, descricao, preco, categoria, status')
-          .eq('status', 'ativo');
-
-        if (error) {
-          throw error;
-        }
-
-        const dbProducts = Array.isArray(data) ? data.map((item) => ({
-          id: item.id,
-          name: item.nome,
-          description: item.descricao || '',
-          price: Number(item.preco) || 0,
-          category: item.categoria || 'outros',
-          icon: 'fas fa-gem',
-          color: '#f0e4d6',
-          textColor: '#b88a6a'
-        })) : [];
-
-        sendJson(res, 200, { products: dbProducts });
-      } catch (error) {
-        sendJson(res, 500, { error: 'Erro ao carregar produtos' });
-      }
-    } else {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, nome, descricao, preco, categoria, status')
+        .eq('status', 'ativo');
+      if (error) throw error;
+      
+      const dbProducts = Array.isArray(data) ? data.map((item) => ({
+        id: item.id,
+        name: item.nome,
+        description: item.descricao || '',
+        price: Number(item.preco) || 0,
+        category: item.categoria || 'outros',
+        icon: 'fas fa-gem',
+        color: '#f0e4d6',
+        textColor: '#b88a6a'
+      })) : [];
+      sendJson(res, 200, { products: dbProducts });
+    } catch (error) {
+      console.error(error);
+      // Fallback para a lista estática caso o Supabase falhe ou tabela não exista
       sendJson(res, 200, { products });
     }
-
     return;
   }
 
   if (url === '/api/auth/register') {
-    if (req.method !== 'POST') {
-      sendJson(res, 405, { error: 'Método não permitido' });
-      return;
-    }
-
+    if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
     try {
       const { name, email, password } = await readJsonBody(req);
       const validatedInput = validateRegistrationInput(name, email, password);
-
       if (await findUserByEmail(validatedInput.email)) {
-        sendJson(res, 409, { error: 'E-mail já cadastrado' });
-        return;
+        return sendJson(res, 409, { error: 'E-mail já cadastrado' });
       }
-
       const newUser = await createUser(validatedInput.name, validatedInput.email, hashPassword(validatedInput.password));
-
-      sendJson(res, 201, {
-        message: 'Usuário cadastrado com sucesso',
-        user: newUser
-      });
+      sendJson(res, 201, { message: 'Usuário cadastrado com sucesso', user: newUser });
     } catch (error) {
       sendJson(res, 400, { error: error.message || 'Erro ao cadastrar' });
     }
@@ -524,37 +332,23 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url === '/api/auth/login') {
-    if (req.method !== 'POST') {
-      sendJson(res, 405, { error: 'Método não permitido' });
-      return;
-    }
-
+    if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
     try {
       const { email, password } = await readJsonBody(req);
       const cleanEmail = normalizeEmail(email);
       const cleanPassword = typeof password === 'string' ? password.trim() : '';
-
-      if (!cleanEmail || !cleanPassword) {
-        sendJson(res, 400, { error: 'Informe e-mail e senha' });
-        return;
-      }
-
+      if (!cleanEmail || !cleanPassword) return sendJson(res, 400, { error: 'Informe e-mail e senha' });
+      
       const user = await findUserByEmail(cleanEmail);
       const storedHash = user ? (user.senha_hash || user.password) : null;
       if (!user || storedHash !== hashPassword(cleanPassword)) {
-        sendJson(res, 401, { error: 'Credenciais inválidas' });
-        return;
+        return sendJson(res, 401, { error: 'Credenciais inválidas' });
       }
-
       const token = crypto.randomBytes(16).toString('hex');
       sendJson(res, 200, {
         message: 'Login realizado com sucesso',
         token,
-        user: {
-          id: user.id,
-          name: user.name || user.nome,
-          email: user.email
-        }
+        user: { id: user.id, name: user.name || user.nome, email: user.email }
       });
     } catch (error) {
       sendJson(res, 400, { error: error.message || 'Erro ao fazer login' });
@@ -592,14 +386,10 @@ const server = http.createServer(async (req, res) => {
   }
 
   const safePath = getSafeFilePath(url === '/' ? '/index.html' : url);
-  if (!safePath) {
-    sendJson(res, 404, { error: 'Arquivo não encontrado' });
-    return;
-  }
-
+  if (!safePath) return sendJson(res, 404, { error: 'Arquivo não encontrado' });
   serveStatic(res, safePath);
 });
 
 server.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
+  console.log(`Servidor rodando na porta ${port}`);
 });
