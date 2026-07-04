@@ -8,6 +8,7 @@ let isSubmitting = false;
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
   localStorage.removeItem('floraCsrfToken');
 }
 
@@ -102,6 +103,9 @@ loginForm?.addEventListener('submit', async (event) => {
     const data = await postJson('/api/auth/login', payload);
     const user = data.user || { name: payload.email.split('@')[0], email: payload.email };
     localStorage.setItem('floraUser', JSON.stringify(user));
+    if (data.token) {
+      localStorage.setItem('floraToken', data.token);
+    }
     if (data.csrfToken) {
       localStorage.setItem('floraCsrfToken', data.csrfToken);
     }

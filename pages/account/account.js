@@ -8,11 +8,16 @@ const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
   localStorage.removeItem('floraCsrfToken');
 }
 
 function getStoredCsrfToken() {
   return localStorage.getItem('floraCsrfToken') || '';
+}
+
+function getStoredToken() {
+  return localStorage.getItem('floraToken') || '';
 }
 
 function setStoredCsrfToken(token) {
@@ -37,13 +42,16 @@ function getStoredUser() {
 }
 
 async function fetchCurrentUser() {
+  const token = getStoredToken();
   for (const baseUrl of API_BASE_CANDIDATES) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const response = await fetch(`${baseUrl}/api/auth/me`, {
         method: 'GET',
         credentials: 'include',
+        headers,
         signal: controller.signal
       });
       const data = await response.json().catch(() => ({}));
@@ -106,6 +114,12 @@ if (!user) {
       accountEmail.textContent = safeUser.email;
     })
     .catch(() => {
+      const fallbackUser = getStoredUser();
+      if (fallbackUser) {
+        accountName.textContent = fallbackUser.name || 'Cliente Flora';
+        accountEmail.textContent = fallbackUser.email || '-';
+        return;
+      }
       clearAuthSession();
       window.location.href = '../login/login.html';
     });

@@ -23,6 +23,7 @@ const categoryLabels = {
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
   localStorage.removeItem('floraCsrfToken');
 }
 

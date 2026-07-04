@@ -7,7 +7,12 @@ const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
+  localStorage.removeItem('floraToken');
   localStorage.removeItem('floraCsrfToken');
+}
+
+function getStoredToken() {
+  return localStorage.getItem('floraToken') || '';
 }
 
 function getStoredUser() {
@@ -40,10 +45,13 @@ function updateAuthNav() {
   }
 }
 
-async function fetchApiJson(path) {
+async function fetchApiJson(path, extraHeaders = {}) {
   for (const baseUrl of API_BASE_CANDIDATES) {
     try {
-      const response = await fetch(`${baseUrl}${path}`, { credentials: 'include' });
+      const response = await fetch(`${baseUrl}${path}`, {
+        credentials: 'include',
+        headers: extraHeaders
+      });
       if (!response.ok) continue;
       return await response.json();
     } catch (error) {
@@ -55,9 +63,14 @@ async function fetchApiJson(path) {
 
 async function hydrateAuthState() {
   try {
-    const data = await fetchApiJson('/api/auth/me');
+    const token = getStoredToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const data = await fetchApiJson('/api/auth/me', headers);
     if (data?.user) {
       localStorage.setItem('floraUser', JSON.stringify(data.user));
+      if (data.token) {
+        localStorage.setItem('floraToken', data.token);
+      }
       if (data.csrfToken) {
         localStorage.setItem('floraCsrfToken', data.csrfToken);
       }
@@ -65,7 +78,9 @@ async function hydrateAuthState() {
       clearAuthSession();
     }
   } catch (error) {
-    clearAuthSession();
+    if (!getStoredUser()) {
+      clearAuthSession();
+    }
   } finally {
     updateAuthNav();
   }
