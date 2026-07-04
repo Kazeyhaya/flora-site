@@ -1,7 +1,31 @@
 {
-  "users": [],
-  "customers": [],
-  "orders": [],
+  "users": [
+    {
+      "nome": "Carla",
+      "email": "carla@example.com",
+      "senha_hash": "scrypt$087f1255edcd18087ca30edc69a53afb$2101eb218bf8bf967625e28763437aba0b526245634d76dff6c84071ff017698117790a2ba795bfc0497c96bf370eec722a3487ba3e19a515107ac45f8998417",
+      "role": "cliente",
+      "id": 1
+    }
+  ],
+  "customers": [
+    {
+      "user_id": 1,
+      "cpf_cnpj": null,
+      "telefone": null,
+      "endereco": null,
+      "id": 1
+    }
+  ],
+  "orders": [
+    {
+      "customer_id": 1,
+      "valor_total": 52.5,
+      "status": "pendente",
+      "forma_pagamento": "não informado",
+      "id": 1
+    }
+  ],
   "order_items": [],
   "products": [
     {
@@ -102,9 +126,9 @@
     }
   ],
   "sequences": {
-    "users": 0,
-    "customers": 0,
-    "orders": 0,
+    "users": 1,
+    "customers": 1,
+    "orders": 1,
     "order_items": 0,
     "products": 8
   }

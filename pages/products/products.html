@@ -37,15 +37,35 @@
           <h1>Nossos produtos</h1>
           <p>Escolha por categoria ou busque pelo nome para encontrar os itens ideais para a rotina da cliente.</p>
         </div>
-        <div class="filters">
-          <input id="searchInput" type="search" placeholder="Buscar produto" />
-          <select id="categoryFilter">
-            <option value="todos">Todas as categorias</option>
-            <option value="kits">Kits</option>
-            <option value="clientes">Skincare</option>
-            <option value="pedidos">Acessorios</option>
-            <option value="entregas">Mais vendidos</option>
-          </select>
+        <div class="toolbar">
+          <div class="toolbar-row">
+            <div class="search-wrap">
+              <i class="fas fa-search search-icon" aria-hidden="true"></i>
+              <input id="searchInput" type="search" placeholder="Buscar produto…" aria-label="Buscar produto" />
+            </div>
+            <select id="categoryFilter" aria-label="Filtrar por categoria">
+              <option value="todos">Todas as categorias</option>
+              <option value="maquiagem">Maquiagem</option>
+              <option value="skincare">Skincare</option>
+              <option value="kits">Kits e Combos</option>
+              <option value="acessorios">Acessórios</option>
+              <option value="perfumes">Perfumes</option>
+              <option value="cabelos">Cabelos</option>
+            </select>
+            <select id="sortSelect" aria-label="Ordenar produtos">
+              <option value="relevancia">Ordenar por</option>
+              <option value="preco_asc">Menor preço</option>
+              <option value="preco_desc">Maior preço</option>
+              <option value="nome_az">A → Z</option>
+              <option value="nome_za">Z → A</option>
+            </select>
+          </div>
+          <div class="badge-pills" id="badgePills" role="group" aria-label="Filtrar por categoria especial">
+            <button class="badge-pill active" data-badge="todos">Todos</button>
+            <button class="badge-pill badge-pill--novo" data-badge="Novo">🌱 Novo</button>
+            <button class="badge-pill badge-pill--destaque" data-badge="Destaque">⭐ Destaque</button>
+            <button class="badge-pill badge-pill--promo" data-badge="Promoção">🏷️ Promoção</button>
+          </div>
         </div>
       </section>
 

@@ -1,0 +1,99 @@
+{
+  "users": [
+    {
+      "nome": "Bia",
+      "email": "bia@example.com",
+      "senha_hash": "scrypt$eb33f91665cda7535e6ec74686d14d3f$faf23bd08d82bb4e6657c3bcb38b0c23c84644bdca199bab21222d9a8580bcbae167b08d65596b3066aeccd0937122e6da26b06edf8ae8f64cf85f52d295a2c5",
+      "role": "cliente",
+      "id": 1
+    }
+  ],
+  "customers": [
+    {
+      "user_id": 1,
+      "cpf_cnpj": null,
+      "telefone": null,
+      "endereco": null,
+      "id": 1
+    }
+  ],
+  "orders": [],
+  "order_items": [],
+  "products": [
+    {
+      "id": 1,
+      "name": "Blush bastão",
+      "category": "kits",
+      "price": 15.99,
+      "description": "Pigmento cremoso · acabamento natural",
+      "icon": "fas fa-palette",
+      "color": "#fce4e4",
+      "textColor": "#d47a7a",
+      "badge": "Novo",
+      "status": "ativo"
+    },
+    {
+      "id": 2,
+      "name": "Serum facial",
+      "category": "kits",
+      "price": 15.99,
+      "description": "Hidratação profunda · antioxidante",
+      "icon": "fas fa-flask",
+      "color": "#e0f0e0",
+      "textColor": "#5a9a5a",
+      "badge": "+ Brinde",
+      "status": "ativo"
+    },
+    {
+      "id": 3,
+      "name": "Rosa Mosqueta",
+      "category": "entregas",
+      "price": 19.9,
+      "description": "Óleo regenerador · cicatrizante",
+      "icon": "fas fa-oil-can",
+      "color": "#fce4d6",
+      "textColor": "#c97a4a",
+      "status": "ativo"
+    },
+    {
+      "id": 4,
+      "name": "Clarador",
+      "category": "clientes",
+      "price": 22.5,
+      "description": "Uniformiza o tom · luminosidade",
+      "icon": "fas fa-star",
+      "color": "#e8e0f0",
+      "textColor": "#8a6aaa",
+      "status": "ativo"
+    },
+    {
+      "id": 5,
+      "name": "Pure Mineral Blush",
+      "category": "clientes",
+      "price": 18.9,
+      "description": "Mineral · acabamento aveludado",
+      "icon": "fas fa-gem",
+      "color": "#f0e4d6",
+      "textColor": "#b88a6a",
+      "status": "ativo"
+    },
+    {
+      "id": 6,
+      "name": "Prendedor de Pelúcia",
+      "category": "pedidos",
+      "price": 12,
+      "description": "Acessório fofo · para cabelo",
+      "icon": "fas fa-paw",
+      "color": "#f0e8e8",
+      "textColor": "#b08a8a",
+      "status": "ativo"
+    }
+  ],
+  "sequences": {
+    "users": 1,
+    "customers": 1,
+    "orders": 0,
+    "order_items": 0,
+    "products": 6
+  }
+}

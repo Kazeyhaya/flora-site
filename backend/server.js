@@ -11,15 +11,30 @@ const rootDir = path.join(__dirname, '..');
 const supabaseUrl = process.env.SUPABASE_URL;
 // Tenta pegar a Service Role Key primeiro, senão usa a normal
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+const shouldUseLocalStore = Boolean(process.env.DB_PATH) || process.env.NODE_ENV === 'test';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('ERRO FATAL: Variáveis de ambiente do Supabase não configuradas.');
-  process.exit(1);
+  if (!shouldUseLocalStore) {
+    console.error('ERRO FATAL: Variáveis de ambiente do Supabase não configuradas.');
+    process.exit(1);
+  }
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || supabaseKey;
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Usando datastore local para desenvolvimento/testes.');
+}
+
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const AUTH_TOKEN_SECRET = process.env.AUTH_TOKEN_SECRET || supabaseKey || 'flora-local-auth-secret';
 const AUTH_TOKEN_TTL_SECONDS = 8 * 60 * 60;
+const AUTH_TOKEN_RENEW_THRESHOLD_SECONDS = 30 * 60;
+const CSRF_TOKEN_TTL_SECONDS = AUTH_TOKEN_TTL_SECONDS;
+const FRONTEND_ORIGINS = new Set(
+  String(process.env.FRONTEND_ORIGIN || 'https://flora-website-roan.vercel.app')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
 const rateLimitStore = new Map();
 
 const mimeTypes = {
@@ -36,26 +51,205 @@ const mimeTypes = {
 
 const MAX_BODY_SIZE = 1024 * 1024;
 
-// Produtos de fallback em memória (caso precise)
+// Catálogo de fallback (usado quando Supabase não está disponível)
 const products = [
-  { id: 1, name: 'Blush bastão', category: 'kits', price: 15.99, description: 'Pigmento cremoso · acabamento natural', icon: 'fas fa-palette', color: '#fce4e4', textColor: '#d47a7a', badge: 'Novo' },
-  { id: 2, name: 'Serum facial', category: 'kits', price: 15.99, description: 'Hidratação profunda · antioxidante', icon: 'fas fa-flask', color: '#e0f0e0', textColor: '#5a9a5a', badge: '+ Brinde' },
-  { id: 3, name: 'Rosa Mosqueta', category: 'entregas', price: 19.9, description: 'Óleo regenerador · cicatrizante', icon: 'fas fa-oil-can', color: '#fce4d6', textColor: '#c97a4a' },
-  { id: 4, name: 'Clarador', category: 'clientes', price: 22.5, description: 'Uniformiza o tom · luminosidade', icon: 'fas fa-star', color: '#e8e0f0', textColor: '#8a6aaa' },
-  { id: 5, name: 'Pure Mineral Blush', category: 'clientes', price: 18.9, description: 'Mineral · acabamento aveludado', icon: 'fas fa-gem', color: '#f0e4d6', textColor: '#b88a6a' },
-  { id: 6, name: 'Prendedor de Pelúcia', category: 'pedidos', price: 12, description: 'Acessório fofo · para cabelo', icon: 'fas fa-paw', color: '#f0e8e8', textColor: '#b08a8a' }
+  { id: 1, name: 'Blush Bastão', category: 'maquiagem', price: 15.99, description: 'Pigmento cremoso · acabamento natural', icon: 'fas fa-palette', badge: 'Novo', destaque: true, preco_promo: null },
+  { id: 2, name: 'Sérum Facial', category: 'skincare', price: 29.90, description: 'Hidratação profunda · antioxidante', icon: 'fas fa-flask', badge: 'Promoção', destaque: true, preco_promo: 19.90 },
+  { id: 3, name: 'Óleo Rosa Mosqueta', category: 'skincare', price: 19.90, description: 'Óleo regenerador · cicatrizante', icon: 'fas fa-oil-can', badge: null, destaque: false, preco_promo: null },
+  { id: 4, name: 'Clarificante Facial', category: 'skincare', price: 22.50, description: 'Uniformiza o tom · luminosidade', icon: 'fas fa-star', badge: 'Destaque', destaque: true, preco_promo: null },
+  { id: 5, name: 'Pure Mineral Blush', category: 'maquiagem', price: 18.90, description: 'Mineral · acabamento aveludado', icon: 'fas fa-gem', badge: 'Destaque', destaque: true, preco_promo: null },
+  { id: 6, name: 'Prendedor de Pelúcia', category: 'acessorios', price: 12.00, description: 'Acessório fofo · para cabelo', icon: 'fas fa-paw', badge: 'Novo', destaque: false, preco_promo: null },
+  { id: 7, name: 'Kit Rotina Completa', category: 'kits', price: 49.90, description: 'Sérum + hidratante + tônico · cuidado diário', icon: 'fas fa-box', badge: 'Promoção', destaque: true, preco_promo: 39.90 },
+  { id: 8, name: 'Hidratante Corporal', category: 'skincare', price: 24.90, description: 'Textura leve · fragrância suave', icon: 'fas fa-hand-sparkles', badge: 'Novo', destaque: false, preco_promo: null }
 ];
 
+function createDefaultLocalState() {
+  return {
+    users: [],
+    customers: [],
+    orders: [],
+    order_items: [],
+    products: products.map((item) => ({ ...item, status: 'ativo' })),
+    sequences: {
+      users: 0,
+      customers: 0,
+      orders: 0,
+      order_items: 0,
+      products: products.length
+    }
+  };
+}
+
+function readLocalState(filePath) {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) return createDefaultLocalState();
+    const rawContent = fs.readFileSync(filePath, 'utf8');
+    if (!rawContent.trim()) return createDefaultLocalState();
+    const parsed = JSON.parse(rawContent);
+    return {
+      ...createDefaultLocalState(),
+      ...parsed,
+      sequences: {
+        ...createDefaultLocalState().sequences,
+        ...(parsed.sequences || {})
+      }
+    };
+  } catch (error) {
+    return createDefaultLocalState();
+  }
+}
+
+function writeLocalState(filePath, state) {
+  if (!filePath) return;
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(state, null, 2));
+}
+
+function projectRecord(record, columns) {
+  if (!columns || columns === '*' || columns.trim() === '*') return { ...record };
+  return columns.split(',').map((entry) => entry.trim()).filter(Boolean).reduce((accumulator, column) => {
+    accumulator[column] = record[column];
+    return accumulator;
+  }, {});
+}
+
+function nextLocalId(state, table) {
+  const currentValue = Number(state.sequences?.[table] || 0);
+  const nextValue = currentValue + 1;
+  state.sequences = state.sequences || {};
+  state.sequences[table] = nextValue;
+  return nextValue;
+}
+
+class LocalQueryBuilder {
+  constructor(store, table, mode = 'select') {
+    this.store = store;
+    this.table = table;
+    this.mode = mode;
+    this.columns = '*';
+    this.options = {};
+    this.filters = [];
+    this.limitCount = null;
+    this.insertPayload = null;
+  }
+
+  select(columns = '*', options = {}) {
+    this.columns = columns;
+    this.options = options || {};
+    return this;
+  }
+
+  insert(payload) {
+    this.mode = 'insert';
+    this.insertPayload = payload;
+    return this;
+  }
+
+  eq(column, value) {
+    this.filters.push({ column, value });
+    return this;
+  }
+
+  limit(count) {
+    this.limitCount = count;
+    return this._execute();
+  }
+
+  maybeSingle() {
+    return this._execute('maybeSingle');
+  }
+
+  single() {
+    return this._execute('single');
+  }
+
+  then(resolve, reject) {
+    return this._execute().then(resolve, reject);
+  }
+
+  _applyFilters(rows) {
+    return this.filters.reduce((filteredRows, filter) => filteredRows.filter((row) => row?.[filter.column] === filter.value), rows);
+  }
+
+  _runSelect(state) {
+    const rows = this._applyFilters(Array.isArray(state[this.table]) ? state[this.table] : []);
+    const limitedRows = typeof this.limitCount === 'number' ? rows.slice(0, this.limitCount) : rows;
+    if (this.options?.head && this.options?.count === 'exact') {
+      return { data: null, count: rows.length, error: null };
+    }
+    return { data: limitedRows.map((row) => projectRecord(row, this.columns)), error: null };
+  }
+
+  _runInsert(state) {
+    const payloadRows = Array.isArray(this.insertPayload) ? this.insertPayload : [this.insertPayload];
+    const tableRows = Array.isArray(state[this.table]) ? state[this.table] : [];
+    const insertedRows = payloadRows.map((row) => {
+      const record = { ...row };
+      if (record.id == null) {
+        record.id = nextLocalId(state, this.table);
+      }
+      tableRows.push(record);
+      return record;
+    });
+    state[this.table] = tableRows;
+    return { data: insertedRows.map((row) => projectRecord(row, this.columns)), error: null };
+  }
+
+  _execute(singleMode) {
+    return Promise.resolve().then(() => {
+      const state = readLocalState(this.store.filePath);
+      const result = this.mode === 'insert' ? this._runInsert(state) : this._runSelect(state);
+      if (this.mode === 'insert') {
+        writeLocalState(this.store.filePath, state);
+      }
+
+      if (singleMode === 'single') {
+        if (!result.data || !result.data.length) return { data: null, error: new Error('Registro não encontrado') };
+        return { data: result.data[0], error: null };
+      }
+
+      if (singleMode === 'maybeSingle') {
+        return { data: result.data && result.data.length ? result.data[0] : null, error: null };
+      }
+
+      return result;
+    });
+  }
+}
+
+function createLocalDataSource(filePath) {
+  const store = { filePath };
+  if (!fs.existsSync(filePath)) {
+    writeLocalState(filePath, createDefaultLocalState());
+  }
+  return {
+    from(table) {
+      return new LocalQueryBuilder(store, table);
+    }
+  };
+}
+
+const database = shouldUseLocalStore
+  ? createLocalDataSource(process.env.DB_PATH || path.join(rootDir, 'backend', 'data', 'flora.local.json'))
+  : supabase;
+
 function setSecurityHeaders(res) {
+  const request = res.req;
+  const origin = request?.headers?.origin;
+  const allowOrigin = origin && FRONTEND_ORIGINS.has(origin) ? origin : null;
+
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'");
   res.setHeader('Cache-Control', 'no-store');
-  // Adicionando CORS para permitir que a Vercel acesse a API
-  res.setHeader('Access-Control-Allow-Origin', '*'); 
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (allowOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', allowOrigin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
+  }
 }
 
 function sendJson(res, statusCode, payload) {
@@ -102,6 +296,123 @@ function readJsonBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+function parseCookies(cookieHeader) {
+  return String(cookieHeader || '')
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce((cookies, entry) => {
+      const separatorIndex = entry.indexOf('=');
+      if (separatorIndex === -1) return cookies;
+      const key = entry.slice(0, separatorIndex).trim();
+      const value = entry.slice(separatorIndex + 1).trim();
+      cookies[key] = decodeURIComponent(value);
+      return cookies;
+    }, {});
+}
+
+function getCookie(req, name) {
+  return parseCookies(req.headers.cookie || '')[name] || null;
+}
+
+function isProductionCookieContext(req) {
+  return process.env.NODE_ENV === 'production' || req?.headers?.['x-forwarded-proto'] === 'https';
+}
+
+function buildAuthCookie(token, req, maxAgeSeconds = AUTH_TOKEN_TTL_SECONDS) {
+  const parts = [
+    `flora_auth=${encodeURIComponent(token)}`,
+    'Path=/',
+    `Max-Age=${maxAgeSeconds}`,
+    'HttpOnly',
+    `SameSite=${isProductionCookieContext(req) ? 'None' : 'Lax'}`
+  ];
+  if (isProductionCookieContext(req)) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function clearAuthCookie(req) {
+  const parts = [
+    'flora_auth=;',
+    'Path=/',
+    'Max-Age=0',
+    'HttpOnly',
+    `SameSite=${isProductionCookieContext(req) ? 'None' : 'Lax'}`
+  ];
+  if (isProductionCookieContext(req)) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function buildCsrfCookie(token, req, maxAgeSeconds = CSRF_TOKEN_TTL_SECONDS) {
+  const parts = [
+    `flora_csrf=${encodeURIComponent(token)}`,
+    'Path=/',
+    `Max-Age=${maxAgeSeconds}`,
+    `SameSite=${isProductionCookieContext(req) ? 'None' : 'Lax'}`
+  ];
+  if (isProductionCookieContext(req)) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function clearCsrfCookie(req) {
+  const parts = [
+    'flora_csrf=;',
+    'Path=/',
+    'Max-Age=0',
+    `SameSite=${isProductionCookieContext(req) ? 'None' : 'Lax'}`
+  ];
+  if (isProductionCookieContext(req)) parts.push('Secure');
+  return parts.join('; ');
+}
+
+function createCsrfToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function setSessionCookies(res, authToken, csrfToken, req) {
+  res.setHeader('Set-Cookie', [
+    buildAuthCookie(authToken, req),
+    buildCsrfCookie(csrfToken, req)
+  ]);
+}
+
+function clearSessionCookies(res) {
+  const request = res.req;
+  res.setHeader('Set-Cookie', [
+    clearAuthCookie(request),
+    clearCsrfCookie(request)
+  ]);
+}
+
+function sendAuthCookie(res, token, req, maxAgeSeconds = AUTH_TOKEN_TTL_SECONDS) {
+  res.setHeader('Set-Cookie', buildAuthCookie(token, req, maxAgeSeconds));
+}
+
+function clearAuthSession(res) {
+  const request = res.req;
+  res.setHeader('Set-Cookie', clearAuthCookie(request));
+}
+
+function getCsrfToken(req) {
+  const headerToken = req.headers['x-csrf-token'];
+  return typeof headerToken === 'string' ? headerToken.trim() : '';
+}
+
+function hasAuthenticatedContext(req) {
+  return Boolean(getCookie(req, 'flora_auth') || extractBearerToken(req));
+}
+
+function requireCsrfProtection(req, onlyWhenAuthenticated = false) {
+  if (onlyWhenAuthenticated && !hasAuthenticatedContext(req)) {
+    return true;
+  }
+  const cookieToken = getCookie(req, 'flora_csrf');
+  const headerToken = getCsrfToken(req);
+  if (!cookieToken || !headerToken) return false;
+  if (cookieToken.length !== headerToken.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(cookieToken), Buffer.from(headerToken));
 }
 
 function sanitizeText(value) {
@@ -189,7 +500,7 @@ function verifyPassword(password, storedHash) {
   if (parts.length !== 3) return false;
   const [, salt, hash] = parts;
   const computed = crypto.scryptSync(password, salt, 64).toString('hex');
-  return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
+  return computed.length === hash.length && crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(hash));
 }
 
 function base64UrlEncode(input) {
@@ -255,6 +566,20 @@ function verifyAuthToken(token) {
   }
 }
 
+function tokenNeedsRenewal(payload) {
+  const now = Math.floor(Date.now() / 1000);
+  return payload.exp - now <= AUTH_TOKEN_RENEW_THRESHOLD_SECONDS;
+}
+
+async function getAuthenticatedSession(req) {
+  const token = getCookie(req, 'flora_auth') || extractBearerToken(req);
+  const payload = verifyAuthToken(token);
+  if (!payload) return null;
+  const user = await findUserById(payload.sub);
+  if (!user) return null;
+  return { token, payload, user };
+}
+
 function extractBearerToken(req) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -284,7 +609,7 @@ function isRateLimited(req, scope, maxAttempts, windowMs) {
 }
 
 async function findUserByEmail(email) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('users')
     .select('id, nome, email, senha_hash, role')
     .eq('email', email)
@@ -294,7 +619,7 @@ async function findUserByEmail(email) {
 }
 
 async function findUserById(id) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('users')
     .select('id, nome, email, role')
     .eq('id', id)
@@ -304,7 +629,7 @@ async function findUserById(id) {
 }
 
 async function createUser(name, email, passwordHash) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('users')
     .insert({ nome: name, email, senha_hash: passwordHash, role: 'cliente' })
     .select('id, nome, email')
@@ -314,7 +639,7 @@ async function createUser(name, email, passwordHash) {
 }
 
 async function findCustomerByUserId(userId) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('customers')
     .select('*')
     .eq('user_id', userId)
@@ -324,7 +649,7 @@ async function findCustomerByUserId(userId) {
 }
 
 async function createCustomer(userId, cpfCnpj, telefone, endereco) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('customers')
     .insert({ user_id: userId, cpf_cnpj: cpfCnpj, telefone, endereco })
     .select('id, user_id, cpf_cnpj, telefone, endereco')
@@ -337,7 +662,7 @@ async function createOrderItem(orderId, item) {
   if (!item || !item.product_id || !Number.isFinite(Number(item.quantidade)) || Number(item.quantidade) <= 0 || !Number.isFinite(Number(item.valor_unitario))) {
     throw new Error('Item de pedido inválido');
   }
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('order_items')
     .insert({
       order_id: orderId,
@@ -361,7 +686,7 @@ async function createOrder(customerName, customerEmail, total, status, formaPaga
   if (!customer) {
     customer = await createCustomer(user.id, null, null, null);
   }
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from('orders')
     .insert({
       customer_id: customer.id,
@@ -380,9 +705,9 @@ async function createOrder(customerName, customerEmail, total, status, formaPaga
 
 async function getAdminDashboard() {
   const [usersRes, ordersRes, pendingRes] = await Promise.all([
-    supabase.from('users').select('id', { count: 'exact', head: true }),
-    supabase.from('orders').select('id', { count: 'exact', head: true }),
-    supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pendente')
+    database.from('users').select('id', { count: 'exact', head: true }),
+    database.from('orders').select('id', { count: 'exact', head: true }),
+    database.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pendente')
   ]);
   if (usersRes.error || ordersRes.error || pendingRes.error) {
     throw new Error('Erro ao consultar painel administrativo');
@@ -413,21 +738,22 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/products') {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from('products')
-        .select('id, nome, descricao, preco, categoria, status')
+        .select('id, nome, descricao, preco, categoria, status, badge, destaque, preco_promo, icone')
         .eq('status', 'ativo');
       if (error) throw error;
-      
+
       const dbProducts = Array.isArray(data) ? data.map((item) => ({
         id: item.id,
         name: item.nome,
         description: item.descricao || '',
         price: Number(item.preco) || 0,
         category: item.categoria || 'outros',
-        icon: 'fas fa-gem',
-        color: '#f0e4d6',
-        textColor: '#b88a6a'
+        icon: item.icone || 'fas fa-gem',
+        badge: item.badge || null,
+        destaque: Boolean(item.destaque),
+        preco_promo: item.preco_promo != null ? Number(item.preco_promo) : null
       })) : [];
       sendJson(res, 200, { products: dbProducts });
     } catch (error) {
@@ -451,10 +777,13 @@ const server = http.createServer(async (req, res) => {
       }
       const newUser = await createUser(validatedInput.name, validatedInput.email, hashPassword(validatedInput.password));
       const token = createAuthToken(newUser);
+      const csrfToken = createCsrfToken();
+      setSessionCookies(res, token, csrfToken, req);
       sendJson(res, 201, {
         message: 'Usuário cadastrado com sucesso',
         token,
         expiresIn: AUTH_TOKEN_TTL_SECONDS,
+        csrfToken,
         user: newUser
       });
     } catch (error) {
@@ -482,10 +811,13 @@ const server = http.createServer(async (req, res) => {
 
       const safeUser = { id: user.id, name: user.nome, email: user.email, role: user.role || 'cliente' };
       const token = createAuthToken(safeUser);
+      const csrfToken = createCsrfToken();
+      setSessionCookies(res, token, csrfToken, req);
       sendJson(res, 200, {
         message: 'Login realizado com sucesso',
         token,
         expiresIn: AUTH_TOKEN_TTL_SECONDS,
+        csrfToken,
         user: safeUser
       });
     } catch (error) {
@@ -497,14 +829,20 @@ const server = http.createServer(async (req, res) => {
   if (pathname === '/api/auth/me') {
     if (req.method !== 'GET') return sendJson(res, 405, { error: 'Método não permitido' });
     try {
-      const token = extractBearerToken(req);
-      const payload = verifyAuthToken(token);
-      if (!payload) return sendJson(res, 401, { error: 'Sessão inválida ou expirada' });
+      const session = await getAuthenticatedSession(req);
+      if (!session) return sendJson(res, 401, { error: 'Sessão inválida ou expirada' });
 
-      const user = await findUserById(payload.sub);
-      if (!user) return sendJson(res, 401, { error: 'Usuário não encontrado' });
+      const { payload, user } = session;
+      const csrfToken = getCookie(req, 'flora_csrf') || createCsrfToken();
+      if (tokenNeedsRenewal(payload)) {
+        const renewedToken = createAuthToken({ id: user.id, name: user.nome, email: user.email, role: user.role || 'cliente' });
+        setSessionCookies(res, renewedToken, csrfToken, req);
+      } else if (!getCookie(req, 'flora_csrf')) {
+        setSessionCookies(res, session.token, csrfToken, req);
+      }
 
       sendJson(res, 200, {
+        csrfToken,
         user: {
           id: user.id,
           name: user.nome,
@@ -518,9 +856,29 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (pathname === '/api/auth/logout') {
+    if (req.method !== 'POST') return sendJson(res, 405, { error: 'Método não permitido' });
+    if (!requireCsrfProtection(req, true)) {
+      return sendJson(res, 403, { error: 'CSRF inválido ou ausente' });
+    }
+    clearSessionCookies(res);
+    sendJson(res, 200, { message: 'Logout realizado com sucesso' });
+    return;
+  }
+
   if (pathname === '/api/orders' && req.method === 'POST') {
     try {
-      const { customerName, customerEmail, total, status, formaPagamento, items } = await readJsonBody(req);
+      if (isRateLimited(req, 'orders', 6, 10 * 60 * 1000)) {
+        return sendJson(res, 429, { error: 'Muitas tentativas. Aguarde alguns minutos.' });
+      }
+      if (!requireCsrfProtection(req, true)) {
+        return sendJson(res, 403, { error: 'CSRF inválido ou ausente' });
+      }
+      const { customerName, customerEmail, total, status, formaPagamento, items, website, botTrap, honeypot } = await readJsonBody(req);
+      const trapValue = sanitizeText(botTrap || website || honeypot);
+      if (trapValue) {
+        return sendJson(res, 400, { error: 'Requisição suspeita' });
+      }
       const validatedOrder = validateOrderInput(customerName, customerEmail, total, status, formaPagamento);
       const order = await createOrder(
         validatedOrder.customerName,
@@ -539,6 +897,13 @@ const server = http.createServer(async (req, res) => {
 
   if (pathname === '/api/admin/dashboard') {
     try {
+      const session = await getAuthenticatedSession(req);
+      if (!session) {
+        return sendJson(res, 401, { error: 'Sessão inválida ou expirada' });
+      }
+      if ((session.user.role || 'cliente') !== 'admin') {
+        return sendJson(res, 403, { error: 'Acesso restrito ao administrador' });
+      }
       const dashboard = await getAdminDashboard();
       sendJson(res, 200, dashboard);
     } catch (error) {

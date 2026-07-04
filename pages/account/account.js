@@ -3,34 +3,30 @@ const navLinks = document.getElementById('navLinks');
 const accountName = document.getElementById('accountName');
 const accountEmail = document.getElementById('accountEmail');
 const logoutButton = document.getElementById('logoutButton');
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 8000;
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
-  localStorage.removeItem('floraToken');
-  localStorage.removeItem('floraSessionExpiresAt');
+  localStorage.removeItem('floraCsrfToken');
+}
+
+function getStoredCsrfToken() {
+  return localStorage.getItem('floraCsrfToken') || '';
+}
+
+function setStoredCsrfToken(token) {
+  if (typeof token === 'string' && token) {
+    localStorage.setItem('floraCsrfToken', token);
+  }
 }
 
 function getStoredUser() {
   try {
     const rawUser = localStorage.getItem('floraUser');
-    const token = localStorage.getItem('floraToken');
-    if (!rawUser || !token) {
+    if (!rawUser) {
       clearAuthSession();
       return null;
-    }
-
-    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
-    const expiresAt = Number(expiresAtRaw);
-    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
-      clearAuthSession();
-      return null;
-    }
-
-    if (!Number.isFinite(expiresAt)) {
-      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
     }
 
     return JSON.parse(rawUser);
@@ -41,20 +37,20 @@ function getStoredUser() {
 }
 
 async function fetchCurrentUser() {
-  const token = localStorage.getItem('floraToken');
-  if (!token) throw new Error('Sessão ausente');
-
   for (const baseUrl of API_BASE_CANDIDATES) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch(`${baseUrl}/api/auth/me`, {
         method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
         signal: controller.signal
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Sessão inválida');
+      if (data.csrfToken) {
+        setStoredCsrfToken(data.csrfToken);
+      }
       return data.user;
     } catch (error) {
       const isRecoverable = error.name === 'AbortError' || error instanceof TypeError;
@@ -116,8 +112,15 @@ if (!user) {
 }
 
 logoutButton.addEventListener('click', () => {
-  clearAuthSession();
-  window.location.href = '../home/home.html';
+  const csrfToken = getStoredCsrfToken();
+  fetch(`${API_BASE_CANDIDATES[0]}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {}
+  }).catch(() => null).finally(() => {
+    clearAuthSession();
+    window.location.href = '../home/home.html';
+  });
 });
 
 updateAuthNav();

@@ -4,7 +4,8 @@
   "description": "Backend inicial para a loja Flora",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.35.0"

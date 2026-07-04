@@ -2,42 +2,36 @@ const menuToggle = document.getElementById('menuToggle');
 const navLinks = document.getElementById('navLinks');
 const searchInput = document.getElementById('searchInput');
 const categoryFilter = document.getElementById('categoryFilter');
+const sortSelect = document.getElementById('sortSelect');
 const productsGrid = document.getElementById('productsGrid');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 let products = [];
+let activeBadge = 'todos';
+let searchDebounce = null;
 const categoryLabels = {
-  kits: 'Kits',
+  maquiagem: 'Maquiagem',
+  skincare: 'Skincare',
+  kits: 'Kits e Combos',
+  acessorios: 'Acessórios',
+  perfumes: 'Perfumes',
+  cabelos: 'Cabelos',
   clientes: 'Skincare',
-  pedidos: 'Acessorios',
-  entregas: 'Mais vendidos',
+  pedidos: 'Acessórios',
+  entregas: 'Destaque',
   outros: 'Outros'
 };
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
-  localStorage.removeItem('floraToken');
-  localStorage.removeItem('floraSessionExpiresAt');
+  localStorage.removeItem('floraCsrfToken');
 }
 
 function getStoredUser() {
   try {
     const rawUser = localStorage.getItem('floraUser');
-    const token = localStorage.getItem('floraToken');
-    if (!rawUser || !token) {
+    if (!rawUser) {
       clearAuthSession();
       return null;
-    }
-
-    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
-    const expiresAt = Number(expiresAtRaw);
-    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
-      clearAuthSession();
-      return null;
-    }
-
-    if (!Number.isFinite(expiresAt)) {
-      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
     }
 
     return JSON.parse(rawUser);
@@ -60,7 +54,7 @@ function updateAuthNav() {
 async function fetchApiJson(path) {
   for (const baseUrl of API_BASE_CANDIDATES) {
     try {
-      const response = await fetch(`${baseUrl}${path}`);
+      const response = await fetch(`${baseUrl}${path}`, { credentials: 'include' });
       if (!response.ok) continue;
       return await response.json();
     } catch (error) {
@@ -85,28 +79,63 @@ document.addEventListener('click', (event) => {
   if (!event.target.closest('.nav-shell')) toggleMenu(false);
 });
 
+function badgeCssClass(badge) {
+  const map = { 'Novo': 'novo', 'Destaque': 'destaque', 'Promoção': 'promo' };
+  return map[badge] || 'novo';
+}
+
+function renderProductCard(product) {
+  const price = Number(product.price).toFixed(2).replace('.', ',');
+  const promoPrice = product.preco_promo != null ? Number(product.preco_promo).toFixed(2).replace('.', ',') : null;
+  const categoryLabel = categoryLabels[product.category] || 'Outros';
+  const badgeHtml = product.badge
+    ? `<span class="badge badge--${badgeCssClass(product.badge)}">${product.badge}</span>`
+    : '';
+  const priceHtml = promoPrice
+    ? `<div class="price-wrap"><span class="price price--original">R$ ${price}</span><span class="price price--promo">R$ ${promoPrice}</span></div>`
+    : `<div class="price">R$ ${price}</div>`;
+  return `
+    <article class="product-card${product.destaque ? ' product-card--destaque' : ''}">
+      <div class="card-top">
+        <span class="tag">${categoryLabel}</span>
+        ${badgeHtml}
+      </div>
+      <div class="card-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>
+      <h3>${product.name}</h3>
+      <p>${product.description}</p>
+      ${priceHtml}
+    </article>
+  `;
+}
+
 function renderProducts() {
   const term = searchInput.value.trim().toLowerCase();
   const category = categoryFilter.value;
-  const filtered = products.filter((product) => {
+  const sort = sortSelect ? sortSelect.value : 'relevancia';
+
+  let filtered = products.filter((product) => {
     const matchesTerm = `${product.name} ${product.description}`.toLowerCase().includes(term);
     const matchesCategory = category === 'todos' || product.category === category;
-    return matchesTerm && matchesCategory;
+    const matchesBadge = activeBadge === 'todos' || product.badge === activeBadge;
+    return matchesTerm && matchesCategory && matchesBadge;
   });
 
+  if (sort === 'preco_asc') {
+    filtered.sort((a, b) => (a.preco_promo ?? a.price) - (b.preco_promo ?? b.price));
+  } else if (sort === 'preco_desc') {
+    filtered.sort((a, b) => (b.preco_promo ?? b.price) - (a.preco_promo ?? a.price));
+  } else if (sort === 'nome_az') {
+    filtered.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  } else if (sort === 'nome_za') {
+    filtered.sort((a, b) => b.name.localeCompare(a.name, 'pt-BR'));
+  }
+
   if (!filtered.length) {
-    productsGrid.innerHTML = '<div class="empty-state">Nenhum produto corresponde à busca.</div>';
+    productsGrid.innerHTML = '<div class="empty-state">Nenhum produto encontrado.<br><small>Tente outra busca ou categoria.</small></div>';
     return;
   }
 
-  productsGrid.innerHTML = filtered.map((product) => `
-    <article class="product-card">
-      <span class="tag">${categoryLabels[product.category] || 'Outros'}</span>
-      <h3>${product.name}</h3>
-      <p>${product.description}</p>
-      <div class="price">R$ ${Number(product.price).toFixed(2).replace('.', ',')}</div>
-    </article>
-  `).join('');
+  productsGrid.innerHTML = filtered.map(renderProductCard).join('');
 }
 
 async function loadProducts() {
@@ -119,7 +148,37 @@ async function loadProducts() {
   }
 }
 
-searchInput.addEventListener('input', renderProducts);
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(renderProducts, 300);
+});
 categoryFilter.addEventListener('change', renderProducts);
+if (sortSelect) sortSelect.addEventListener('change', renderProducts);
+
+document.getElementById('badgePills')?.addEventListener('click', (event) => {
+  const pill = event.target.closest('.badge-pill');
+  if (!pill) return;
+  activeBadge = pill.dataset.badge;
+  document.querySelectorAll('.badge-pill').forEach((p) => p.classList.remove('active'));
+  pill.classList.add('active');
+  renderProducts();
+});
+
+function applyUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const badge = params.get('badge');
+  const category = params.get('category');
+  if (badge) {
+    activeBadge = badge;
+    document.querySelectorAll('.badge-pill').forEach((p) => {
+      p.classList.toggle('active', p.dataset.badge === badge);
+    });
+  }
+  if (category && categoryFilter) {
+    categoryFilter.value = category;
+  }
+}
+
 updateAuthNav();
+applyUrlParams();
 loadProducts();

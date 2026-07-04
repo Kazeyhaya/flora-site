@@ -30,8 +30,12 @@ button, input, select { font: inherit; }
 .page-header { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 24px; }
 .eyebrow { text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; font-weight: 700; color: var(--rose-dark); margin-bottom: 8px; }
 .page-header h1 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 8px; }
-.filters { display: flex; flex-wrap: wrap; gap: 12px; }
-.filters input, .filters select { border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; min-width: 200px; background: rgba(255, 248, 248, 0.95); color: var(--green-dark); }
+.toolbar { display: flex; flex-direction: column; gap: 12px; }
+.toolbar-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.search-wrap { position: relative; flex: 1; min-width: 200px; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--green-dark); pointer-events: none; font-size: 0.85rem; }
+.search-wrap input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid var(--border); border-radius: 999px; background: rgba(255, 248, 248, 0.95); color: var(--green-dark); }
+.toolbar-row select { border: 1px solid var(--border); border-radius: 999px; padding: 10px 14px; background: rgba(255, 248, 248, 0.95); color: var(--green-dark); min-width: 160px; cursor: pointer; }
 .products-grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .product-card { background: rgba(77, 110, 86, 0.95); border: 1px solid rgba(242, 143, 162, 0.2); border-radius: 24px; box-shadow: var(--shadow); padding: 20px; color: var(--text-strong); }
 .product-card h3 { margin-bottom: 8px; }
@@ -62,4 +66,32 @@ button, input, select { font: inherit; }
   .nav-links.open { transform: translateX(0); }
   .nav-links a { width: 100%; padding: 12px 0; }
   .page-header { flex-direction: column; align-items: flex-start; }
+  .toolbar-row { flex-direction: column; }
+  .search-wrap, .toolbar-row select { width: 100%; min-width: unset; }
+  .badge-pills { gap: 6px; }
 }
+
+/* --- Badge pills (filtro rápido) --- */
+.badge-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.badge-pill { border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; background: rgba(255, 248, 248, 0.08); color: var(--text-strong); cursor: pointer; font-size: 0.875rem; transition: background 0.15s, border-color 0.15s; }
+.badge-pill:hover { background: rgba(255, 248, 248, 0.18); }
+.badge-pill.active { background: rgba(242, 143, 162, 0.22); border-color: var(--rose); font-weight: 600; }
+.badge-pill--novo.active { background: rgba(187, 208, 119, 0.22); border-color: var(--green); }
+.badge-pill--destaque.active { background: rgba(255, 200, 50, 0.18); border-color: #f5c200; }
+.badge-pill--promo.active { background: rgba(242, 143, 162, 0.28); border-color: var(--rose-dark); }
+
+/* --- Melhorias no card de produto --- */
+.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.card-icon { font-size: 1.6rem; color: var(--green); margin-bottom: 10px; }
+.product-card--destaque { border-color: rgba(187, 208, 119, 0.4); box-shadow: 0 0 0 1px rgba(187, 208, 119, 0.25), var(--shadow); }
+
+/* --- Badges nos cards --- */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }
+.badge--novo { background: rgba(187, 208, 119, 0.2); color: #bbd077; border: 1px solid rgba(187, 208, 119, 0.4); }
+.badge--destaque { background: rgba(255, 200, 50, 0.18); color: #f5c200; border: 1px solid rgba(245, 194, 0, 0.35); }
+.badge--promo { background: rgba(242, 143, 162, 0.22); color: var(--rose); border: 1px solid rgba(242, 143, 162, 0.4); }
+
+/* --- Preço promocional --- */
+.price-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.price--original { text-decoration: line-through; color: rgba(255, 248, 248, 0.42); font-weight: 400; font-size: 0.9rem; }
+.price--promo { font-weight: 700; color: var(--green); font-size: 1.05rem; }

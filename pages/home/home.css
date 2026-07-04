@@ -84,4 +84,32 @@ button, input { font: inherit; }
   .nav-links a { width: 100%; padding: 12px 0; }
   .hero-grid, .split-grid { grid-template-columns: 1fr; }
   .section-head, .footer-grid { flex-direction: column; align-items: flex-start; }
+  .promo-banner-inner { gap: 8px; }
+  .promo-banner-cta { font-size: 0.8rem; }
 }
+
+/* --- Banner de promoção sazonal --- */
+.promo-banner { background: linear-gradient(90deg, #2f4d38, #3d6b50, #2f4d38); border-bottom: 1px solid rgba(187, 208, 119, 0.3); padding: 10px 0; }
+.promo-banner-inner { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.promo-banner-icon { font-size: 1.1rem; flex-shrink: 0; }
+.promo-banner-text { flex: 1; color: var(--text-strong); font-size: 0.92rem; min-width: 180px; }
+.promo-banner-cta { background: var(--rose); color: white; padding: 5px 14px; border-radius: 999px; font-weight: 600; font-size: 0.85rem; white-space: nowrap; transition: opacity 0.15s; }
+.promo-banner-cta:hover { opacity: 0.88; }
+.promo-banner-close { background: transparent; border: none; color: rgba(255, 248, 248, 0.55); font-size: 1rem; cursor: pointer; padding: 4px 8px; margin-left: auto; transition: color 0.15s; }
+.promo-banner-close:hover { color: var(--text-strong); }
+
+/* --- Seção novidades --- */
+.novidades-section { background: linear-gradient(180deg, #3a5544 0%, #3f5b47 100%); }
+
+/* --- Card de produto na home com badge --- */
+.product-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.home-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+.home-badge--novo { background: rgba(187, 208, 119, 0.2); color: #bbd077; border: 1px solid rgba(187, 208, 119, 0.4); }
+.home-badge--destaque { background: rgba(255, 200, 50, 0.16); color: #f5c200; border: 1px solid rgba(245, 194, 0, 0.35); }
+.home-badge--promo { background: rgba(242, 143, 162, 0.2); color: var(--rose); border: 1px solid rgba(242, 143, 162, 0.4); }
+
+/* --- Preço promocional nos cards da home --- */
+.price-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.price--original { text-decoration: line-through; color: rgba(255, 248, 248, 0.42); font-weight: 400; font-size: 0.88rem; }
+.price--promo { font-weight: 700; color: var(--green); }
+.empty-small { font-size: 0.9rem; color: rgba(255, 248, 248, 0.6); }

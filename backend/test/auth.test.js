@@ -72,6 +72,94 @@ test('registro e login de cliente funcionam', async () => {
   }
 });
 
+test('rotas autenticadas de escrita exigem CSRF', async () => {
+  const dbPath = path.join(__dirname, 'fixtures-csrf.db');
+  fs.rmSync(dbPath, { force: true });
+
+  const server = spawn(process.execPath, ['server.js'], {
+    cwd: path.join(__dirname, '..'),
+    env: { ...process.env, PORT: '3104', DB_PATH: dbPath },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  try {
+    await waitForServer('http://127.0.0.1:3104/api/health');
+
+    const registerResponse = await fetch('http://127.0.0.1:3104/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Carla', email: 'carla@example.com', password: '123456' })
+    });
+
+    assert.equal(registerResponse.status, 201);
+
+    const loginResponse = await fetch('http://127.0.0.1:3104/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'carla@example.com', password: '123456' })
+    });
+
+    assert.equal(loginResponse.status, 200);
+    const loginData = await loginResponse.json();
+    assert.ok(loginData.token);
+    assert.ok(loginData.csrfToken);
+
+    const cookieHeader = `flora_auth=${encodeURIComponent(loginData.token)}; flora_csrf=${encodeURIComponent(loginData.csrfToken)}`;
+
+    const blockedLogoutResponse = await fetch('http://127.0.0.1:3104/api/auth/logout', {
+      method: 'POST',
+      headers: { Cookie: cookieHeader }
+    });
+
+    assert.equal(blockedLogoutResponse.status, 403);
+
+    const allowedLogoutResponse = await fetch('http://127.0.0.1:3104/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        Cookie: cookieHeader,
+        'X-CSRF-Token': loginData.csrfToken
+      }
+    });
+
+    assert.equal(allowedLogoutResponse.status, 200);
+
+    const blockedOrderResponse = await fetch('http://127.0.0.1:3104/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieHeader
+      },
+      body: JSON.stringify({
+        customerName: 'Carla',
+        customerEmail: 'carla@example.com',
+        total: 52.5,
+        status: 'pendente'
+      })
+    });
+
+    assert.equal(blockedOrderResponse.status, 403);
+
+    const allowedOrderResponse = await fetch('http://127.0.0.1:3104/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookieHeader,
+        'X-CSRF-Token': loginData.csrfToken
+      },
+      body: JSON.stringify({
+        customerName: 'Carla',
+        customerEmail: 'carla@example.com',
+        total: 52.5,
+        status: 'pendente'
+      })
+    });
+
+    assert.equal(allowedOrderResponse.status, 201);
+  } finally {
+    server.kill('SIGTERM');
+  }
+});
+
 test('caminhos com travessia de diretórios são bloqueados', async () => {
   const dbPath = path.join(__dirname, 'fixtures-path.db');
   fs.rmSync(dbPath, { force: true });

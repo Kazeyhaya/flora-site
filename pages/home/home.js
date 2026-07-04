@@ -4,32 +4,18 @@ const featuredProducts = document.getElementById('featuredProducts');
 const currentYear = document.getElementById('currentYear');
 const heroAccountButton = document.getElementById('heroAccountButton');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
-const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
-  localStorage.removeItem('floraToken');
-  localStorage.removeItem('floraSessionExpiresAt');
+  localStorage.removeItem('floraCsrfToken');
 }
 
 function getStoredUser() {
   try {
     const rawUser = localStorage.getItem('floraUser');
-    const token = localStorage.getItem('floraToken');
-    if (!rawUser || !token) {
+    if (!rawUser) {
       clearAuthSession();
       return null;
-    }
-
-    const expiresAtRaw = localStorage.getItem('floraSessionExpiresAt');
-    const expiresAt = Number(expiresAtRaw);
-    if (Number.isFinite(expiresAt) && Date.now() > expiresAt) {
-      clearAuthSession();
-      return null;
-    }
-
-    if (!Number.isFinite(expiresAt)) {
-      localStorage.setItem('floraSessionExpiresAt', String(Date.now() + SESSION_DURATION_MS));
     }
 
     return JSON.parse(rawUser);
@@ -57,7 +43,7 @@ function updateAuthNav() {
 async function fetchApiJson(path) {
   for (const baseUrl of API_BASE_CANDIDATES) {
     try {
-      const response = await fetch(`${baseUrl}${path}`);
+      const response = await fetch(`${baseUrl}${path}`, { credentials: 'include' });
       if (!response.ok) continue;
       return await response.json();
     } catch (error) {
@@ -65,6 +51,24 @@ async function fetchApiJson(path) {
     }
   }
   throw new Error('Falha ao consultar a API');
+}
+
+async function hydrateAuthState() {
+  try {
+    const data = await fetchApiJson('/api/auth/me');
+    if (data?.user) {
+      localStorage.setItem('floraUser', JSON.stringify(data.user));
+      if (data.csrfToken) {
+        localStorage.setItem('floraCsrfToken', data.csrfToken);
+      }
+    } else {
+      clearAuthSession();
+    }
+  } catch (error) {
+    clearAuthSession();
+  } finally {
+    updateAuthNav();
+  }
 }
 
 function toggleMenu(force) {
@@ -82,27 +86,88 @@ document.addEventListener('click', (event) => {
   if (!event.target.closest('.nav-shell')) toggleMenu(false);
 });
 
-async function loadFeaturedProducts() {
+async function getAllProducts() {
+  if (allProductsCache !== null) return allProductsCache;
   try {
     const data = await fetchApiJson('/api/products');
-    const items = Array.isArray(data.products) ? data.products.slice(0, 3) : [];
-    if (!items.length) {
-      featuredProducts.innerHTML = '<p>Não há produtos disponíveis no momento.</p>';
-      return;
-    }
-    featuredProducts.innerHTML = items.map((product) => `
-      <article class="product-card">
-        <div class="product-icon"><i class="fas fa-gem"></i></div>
-        <h3>${product.name}</h3>
-        <p>${product.description}</p>
-        <div class="price">R$ ${Number(product.price).toFixed(2).replace('.', ',')}</div>
-      </article>
-    `).join('');
+    allProductsCache = Array.isArray(data.products) ? data.products : [];
+  } catch (error) {
+    allProductsCache = [];
+  }
+  return allProductsCache;
+}
+
+function badgeCssClass(badge) {
+  const map = { 'Novo': 'novo', 'Destaque': 'destaque', 'Promoção': 'promo' };
+  return map[badge] || 'novo';
+}
+
+function renderHomeProductCard(product) {
+  const price = Number(product.price).toFixed(2).replace('.', ',');
+  const promoPrice = product.preco_promo != null ? Number(product.preco_promo).toFixed(2).replace('.', ',') : null;
+  const badgeHtml = product.badge
+    ? `<span class="home-badge home-badge--${badgeCssClass(product.badge)}">${product.badge}</span>`
+    : '';
+  const priceHtml = promoPrice
+    ? `<div class="price-wrap"><span class="price price--original">R$ ${price}</span><span class="price price--promo">R$ ${promoPrice}</span></div>`
+    : `<div class="price">R$ ${price}</div>`;
+  return `
+    <article class="product-card">
+      <div class="product-card-top">
+        <div class="product-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>
+        ${badgeHtml}
+      </div>
+      <h3>${product.name}</h3>
+      <p>${product.description}</p>
+      ${priceHtml}
+    </article>
+  `;
+}
+
+async function loadFeaturedProducts() {
+  try {
+    const prods = await getAllProducts();
+    const items = prods.filter((p) => p.destaque).slice(0, 3);
+    featuredProducts.innerHTML = items.length
+      ? items.map(renderHomeProductCard).join('')
+      : '<p>Nenhum produto em destaque no momento.</p>';
   } catch (error) {
     featuredProducts.innerHTML = '<p>Não foi possível carregar os destaques.</p>';
   }
 }
 
+async function loadNovidades() {
+  const container = document.getElementById('novidadesGrid');
+  if (!container) return;
+  try {
+    const prods = await getAllProducts();
+    const items = prods.filter((p) => p.badge === 'Novo').slice(0, 3);
+    container.innerHTML = items.length
+      ? items.map(renderHomeProductCard).join('')
+      : '<p class="empty-small">Em breve novas chegadas.</p>';
+  } catch (error) {
+    const el = document.getElementById('novidadesGrid');
+    if (el) el.innerHTML = '<p class="empty-small">Não foi possível carregar.</p>';
+  }
+}
+
+function initPromoBanner() {
+  const banner = document.getElementById('promoBanner');
+  const closeBtn = document.getElementById('promoBannerClose');
+  if (!banner || !closeBtn) return;
+  if (sessionStorage.getItem('promoBannerDismissed')) {
+    banner.classList.add('is-hidden');
+    return;
+  }
+  closeBtn.addEventListener('click', () => {
+    banner.classList.add('is-hidden');
+    sessionStorage.setItem('promoBannerDismissed', '1');
+  });
+}
+
 currentYear.textContent = new Date().getFullYear();
 updateAuthNav();
+hydrateAuthState();
+initPromoBanner();
 loadFeaturedProducts();
+loadNovidades();
