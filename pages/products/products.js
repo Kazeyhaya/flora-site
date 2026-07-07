@@ -8,18 +8,32 @@ const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
 let products = [];
 let activeBadge = 'todos';
 let searchDebounce = null;
-const categoryLabels = {
-  maquiagem: 'Maquiagem',
-  skincare: 'Skincare',
-  kits: 'Kits e Combos',
-  acessorios: 'Acessórios',
-  perfumes: 'Perfumes',
-  cabelos: 'Cabelos',
-  clientes: 'Skincare',
-  pedidos: 'Acessórios',
-  entregas: 'Destaque',
-  outros: 'Outros'
-};
+
+function rawCategory(value) {
+  return String(value || '').trim();
+}
+
+function toDisplayCategory(value) {
+  const raw = rawCategory(value);
+  return raw || 'Sem categoria';
+}
+
+function buildCategoryOptions() {
+  if (!categoryFilter) return;
+  const previous = categoryFilter.value || 'todos';
+  const uniqueCategories = Array.from(new Set(products.map((product) => rawCategory(product.category)).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const hasUncategorized = products.some((product) => !rawCategory(product.category));
+
+  const options = ['<option value="todos">Todas as categorias</option>'];
+  options.push(...uniqueCategories.map((category) => `<option value="${category}">${category}</option>`));
+  if (hasUncategorized) {
+    options.push('<option value="__sem_categoria__">Sem categoria</option>');
+  }
+
+  categoryFilter.innerHTML = options.join('');
+  const exists = Array.from(categoryFilter.options).some((option) => option.value === previous);
+  categoryFilter.value = exists ? previous : 'todos';
+}
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
@@ -88,7 +102,7 @@ function badgeCssClass(badge) {
 function renderProductCard(product) {
   const price = Number(product.price).toFixed(2).replace('.', ',');
   const promoPrice = product.preco_promo != null ? Number(product.preco_promo).toFixed(2).replace('.', ',') : null;
-  const categoryLabel = categoryLabels[product.category] || 'Outros';
+  const categoryLabel = toDisplayCategory(product.category);
   const imageHtml = product.imageUrl
     ? `<img class="product-image" src="${product.imageUrl}" alt="${product.name}" loading="lazy" />`
     : `<div class="card-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>`;
@@ -119,7 +133,9 @@ function renderProducts() {
 
   let filtered = products.filter((product) => {
     const matchesTerm = `${product.name} ${product.description}`.toLowerCase().includes(term);
-    const matchesCategory = category === 'todos' || product.category === category;
+    const currentCategory = rawCategory(product.category);
+    const matchesCategory = category === 'todos'
+      || (category === '__sem_categoria__' ? !currentCategory : currentCategory === category);
     const matchesBadge = activeBadge === 'todos' || product.badge === activeBadge;
     return matchesTerm && matchesCategory && matchesBadge;
   });
@@ -146,6 +162,7 @@ async function loadProducts() {
   try {
     const data = await fetchApiJson('/api/products');
     products = Array.isArray(data.products) ? data.products : [];
+    buildCategoryOptions();
     renderProducts();
   } catch (error) {
     productsGrid.innerHTML = '<div class="empty-state">Não foi possível carregar os produtos.</div>';
