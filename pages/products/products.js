@@ -89,6 +89,9 @@ function renderProductCard(product) {
   const price = Number(product.price).toFixed(2).replace('.', ',');
   const promoPrice = product.preco_promo != null ? Number(product.preco_promo).toFixed(2).replace('.', ',') : null;
   const categoryLabel = categoryLabels[product.category] || 'Outros';
+  const imageHtml = product.imageUrl
+    ? `<img class="product-image" src="${product.imageUrl}" alt="${product.name}" loading="lazy" />`
+    : `<div class="card-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>`;
   const badgeHtml = product.badge
     ? `<span class="badge badge--${badgeCssClass(product.badge)}">${product.badge}</span>`
     : '';
@@ -101,7 +104,7 @@ function renderProductCard(product) {
         <span class="tag">${categoryLabel}</span>
         ${badgeHtml}
       </div>
-      <div class="card-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>
+      ${imageHtml}
       <h3>${product.name}</h3>
       <p>${product.description}</p>
       ${priceHtml}

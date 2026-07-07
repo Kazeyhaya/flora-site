@@ -53,14 +53,14 @@ const MAX_BODY_SIZE = 1024 * 1024;
 
 // Catálogo de fallback (usado quando Supabase não está disponível)
 const products = [
-  { id: 1, name: 'Blush Bastão', category: 'maquiagem', price: 15.99, description: 'Pigmento cremoso · acabamento natural', icon: 'fas fa-palette', badge: 'Novo', destaque: true, preco_promo: null },
-  { id: 2, name: 'Sérum Facial', category: 'skincare', price: 29.90, description: 'Hidratação profunda · antioxidante', icon: 'fas fa-flask', badge: 'Promoção', destaque: true, preco_promo: 19.90 },
-  { id: 3, name: 'Óleo Rosa Mosqueta', category: 'skincare', price: 19.90, description: 'Óleo regenerador · cicatrizante', icon: 'fas fa-oil-can', badge: null, destaque: false, preco_promo: null },
-  { id: 4, name: 'Clarificante Facial', category: 'skincare', price: 22.50, description: 'Uniformiza o tom · luminosidade', icon: 'fas fa-star', badge: 'Destaque', destaque: true, preco_promo: null },
-  { id: 5, name: 'Pure Mineral Blush', category: 'maquiagem', price: 18.90, description: 'Mineral · acabamento aveludado', icon: 'fas fa-gem', badge: 'Destaque', destaque: true, preco_promo: null },
-  { id: 6, name: 'Prendedor de Pelúcia', category: 'acessorios', price: 12.00, description: 'Acessório fofo · para cabelo', icon: 'fas fa-paw', badge: 'Novo', destaque: false, preco_promo: null },
-  { id: 7, name: 'Kit Rotina Completa', category: 'kits', price: 49.90, description: 'Sérum + hidratante + tônico · cuidado diário', icon: 'fas fa-box', badge: 'Promoção', destaque: true, preco_promo: 39.90 },
-  { id: 8, name: 'Hidratante Corporal', category: 'skincare', price: 24.90, description: 'Textura leve · fragrância suave', icon: 'fas fa-hand-sparkles', badge: 'Novo', destaque: false, preco_promo: null }
+  { id: 1, name: 'Blush Bastão', category: 'maquiagem', price: 15.99, description: 'Pigmento cremoso · acabamento natural', icon: 'fas fa-palette', badge: 'Novo', destaque: true, preco_promo: null, imagem_url: null },
+  { id: 2, name: 'Sérum Facial', category: 'skincare', price: 29.90, description: 'Hidratação profunda · antioxidante', icon: 'fas fa-flask', badge: 'Promoção', destaque: true, preco_promo: 19.90, imagem_url: null },
+  { id: 3, name: 'Óleo Rosa Mosqueta', category: 'skincare', price: 19.90, description: 'Óleo regenerador · cicatrizante', icon: 'fas fa-oil-can', badge: null, destaque: false, preco_promo: null, imagem_url: null },
+  { id: 4, name: 'Clarificante Facial', category: 'skincare', price: 22.50, description: 'Uniformiza o tom · luminosidade', icon: 'fas fa-star', badge: 'Destaque', destaque: true, preco_promo: null, imagem_url: null },
+  { id: 5, name: 'Pure Mineral Blush', category: 'maquiagem', price: 18.90, description: 'Mineral · acabamento aveludado', icon: 'fas fa-gem', badge: 'Destaque', destaque: true, preco_promo: null, imagem_url: null },
+  { id: 6, name: 'Prendedor de Pelúcia', category: 'acessorios', price: 12.00, description: 'Acessório fofo · para cabelo', icon: 'fas fa-paw', badge: 'Novo', destaque: false, preco_promo: null, imagem_url: null },
+  { id: 7, name: 'Kit Rotina Completa', category: 'kits', price: 49.90, description: 'Sérum + hidratante + tônico · cuidado diário', icon: 'fas fa-box', badge: 'Promoção', destaque: true, preco_promo: 39.90, imagem_url: null },
+  { id: 8, name: 'Hidratante Corporal', category: 'skincare', price: 24.90, description: 'Textura leve · fragrância suave', icon: 'fas fa-hand-sparkles', badge: 'Novo', destaque: false, preco_promo: null, imagem_url: null }
 ];
 
 function createDefaultLocalState() {
@@ -740,7 +740,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const { data, error } = await database
         .from('products')
-        .select('id, nome, descricao, preco, categoria, status, badge, destaque, preco_promo, icone')
+        .select('id, nome, descricao, preco, categoria, status, badge, destaque, preco_promo, icone, imagem_url')
         .eq('status', 'ativo');
       if (error) throw error;
 
@@ -751,6 +751,7 @@ const server = http.createServer(async (req, res) => {
         price: Number(item.preco) || 0,
         category: item.categoria || 'outros',
         icon: item.icone || 'fas fa-gem',
+        imageUrl: item.imagem_url || null,
         badge: item.badge || null,
         destaque: Boolean(item.destaque),
         preco_promo: item.preco_promo != null ? Number(item.preco_promo) : null
@@ -758,8 +759,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, { products: dbProducts });
     } catch (error) {
       console.error(error);
-      // Fallback para a lista estática caso o Supabase falhe ou tabela não exista
-      sendJson(res, 200, { products });
+      sendJson(res, 500, { error: 'Não foi possível carregar os produtos do banco de dados.' });
     }
     return;
   }

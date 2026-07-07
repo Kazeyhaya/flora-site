@@ -83,6 +83,7 @@ button, input, select { font: inherit; }
 /* --- Melhorias no card de produto --- */
 .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .card-icon { font-size: 1.6rem; color: var(--green); margin-bottom: 10px; }
+.product-image { width: 100%; height: 180px; object-fit: cover; border-radius: 16px; margin-bottom: 12px; border: 1px solid rgba(242, 143, 162, 0.22); background: rgba(255, 255, 255, 0.06); }
 .product-card--destaque { border-color: rgba(187, 208, 119, 0.4); box-shadow: 0 0 0 1px rgba(187, 208, 119, 0.25), var(--shadow); }
 
 /* --- Badges nos cards --- */

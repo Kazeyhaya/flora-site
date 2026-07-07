@@ -4,6 +4,7 @@ const featuredProducts = document.getElementById('featuredProducts');
 const currentYear = document.getElementById('currentYear');
 const heroAccountButton = document.getElementById('heroAccountButton');
 const API_BASE_CANDIDATES = ['https://backend-flora.onrender.com', ''];
+let allProductsCache = null;
 
 function clearAuthSession() {
   localStorage.removeItem('floraUser');
@@ -120,6 +121,9 @@ function badgeCssClass(badge) {
 function renderHomeProductCard(product) {
   const price = Number(product.price).toFixed(2).replace('.', ',');
   const promoPrice = product.preco_promo != null ? Number(product.preco_promo).toFixed(2).replace('.', ',') : null;
+  const imageHtml = product.imageUrl
+    ? `<img class="product-image" src="${product.imageUrl}" alt="${product.name}" loading="lazy" />`
+    : `<div class="product-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>`;
   const badgeHtml = product.badge
     ? `<span class="home-badge home-badge--${badgeCssClass(product.badge)}">${product.badge}</span>`
     : '';
@@ -129,7 +133,7 @@ function renderHomeProductCard(product) {
   return `
     <article class="product-card">
       <div class="product-card-top">
-        <div class="product-icon"><i class="${product.icon || 'fas fa-gem'}"></i></div>
+        ${imageHtml}
         ${badgeHtml}
       </div>
       <h3>${product.name}</h3>
