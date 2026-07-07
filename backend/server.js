@@ -740,7 +740,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const { data, error } = await database
         .from('products')
-        .select('id, nome, descricao, preco, categoria, status, badge, destaque, preco_promo, icone, imagem_url');
+        .select('id, nome, descricao, preco, categoria, status, imagem_url');
       if (error) throw error;
 
       const dbProducts = Array.isArray(data)
@@ -756,11 +756,11 @@ const server = http.createServer(async (req, res) => {
               description: item.descricao || '',
               price: Number(item.preco) || 0,
               category: item.categoria || 'outros',
-              icon: item.icone || 'fas fa-gem',
+              icon: 'fas fa-gem',
               imageUrl: item.imagem_url || item.image_url || null,
-              badge: item.badge || null,
-              destaque: Boolean(item.destaque),
-              preco_promo: item.preco_promo != null ? Number(item.preco_promo) : null
+              badge: null,
+              destaque: false,
+              preco_promo: null
             }))
         : [];
       sendJson(res, 200, { products: dbProducts });

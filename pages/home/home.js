@@ -146,7 +146,8 @@ function renderHomeProductCard(product) {
 async function loadFeaturedProducts() {
   try {
     const prods = await getAllProducts();
-    const items = prods.filter((p) => p.destaque).slice(0, 3);
+    const highlighted = prods.filter((p) => p.destaque);
+    const items = (highlighted.length ? highlighted : prods).slice(0, 3);
     featuredProducts.innerHTML = items.length
       ? items.map(renderHomeProductCard).join('')
       : '<p>Nenhum produto em destaque no momento.</p>';
@@ -160,7 +161,8 @@ async function loadNovidades() {
   if (!container) return;
   try {
     const prods = await getAllProducts();
-    const items = prods.filter((p) => p.badge === 'Novo').slice(0, 3);
+    const novidades = prods.filter((p) => p.badge === 'Novo');
+    const items = (novidades.length ? novidades : prods).slice(0, 3);
     container.innerHTML = items.length
       ? items.map(renderHomeProductCard).join('')
       : '<p class="empty-small">Em breve novas chegadas.</p>';
